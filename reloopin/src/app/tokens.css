@@ -1,0 +1,101 @@
+/* User-supplied Reloopin semantic color tokens. Source: tokens.json. */
+:root {
+  --background: #f9f9f9;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --muted: #f7f7f8;
+  --muted-foreground: #5b5a5a;
+  --border: #ebebeb;
+  --input: #e4e4e4;
+  --ring: #8da4ef;
+  --inverse: #ffffff;
+  --inverse-foreground: #0a0a0a;
+  --primary: #5f3ed8;
+  --primary-foreground: #ffffff;
+  --primary-container: #f3f0ff;
+  --secondary: #30a46c;
+  --secondary-foreground: #ffffff;
+  --secondary-container: #e9f9ee;
+  --tertiary: #f76300;
+  --tertiary-foreground: #ffffff;
+  --tertiary-container: #ffedd5;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --destructive-container: #fbe9e9;
+  --info: #2563eb;
+  --info-foreground: #ffffff;
+  --info-container: #e9effc;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-container: #e9fcf0;
+  --warning: #ca8a04;
+  --warning-foreground: #ffffff;
+  --warning-container: #fcf6e9;
+  --overlay: rgba(10, 10, 10, 0.6);
+}
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #737373;
+  --inverse: #0a0a0a;
+  --inverse-foreground: #ffffff;
+  --primary: #7d5cf6;
+  --primary-foreground: #ffffff;
+  --primary-container: #1f163d;
+  --secondary: #3eba7e;
+  --secondary-foreground: #ffffff;
+  --secondary-container: #12281f;
+  --tertiary: #ff8c38;
+  --tertiary-foreground: #ffffff;
+  --tertiary-container: #341c0a;
+  --destructive: #f87171;
+  --destructive-foreground: #161619;
+  --destructive-container: #371010;
+  --info: #4a7eee;
+  --info-foreground: #161619;
+  --info-container: #101c37;
+  --success: #1bc75a;
+  --success-foreground: #161619;
+  --success-container: #10371f;
+  --warning: #f2a505;
+  --warning-foreground: #161619;
+  --warning-container: #372b10;
+  --overlay: rgba(10, 10, 10, 0.8);
+}
+
+/* shadcn and component aliases inherit the active semantic palette. */
+:root,
+.dark {
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
+  --accent: var(--primary-container);
+  --accent-foreground: var(--primary);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--primary-container);
+  --sidebar-accent-foreground: var(--primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --canvas: var(--muted);
+  --success-bg: var(--success-container);
+  --warning-bg: var(--warning-container);
+  --warm: var(--tertiary-container);
+  --blue: var(--info-container);
+  --lilac: var(--primary-container);
+  --peach: var(--tertiary-container);
+  --yellow: var(--warning-container);
+  --mint: var(--secondary-container);
+  --rose: var(--destructive-container);
+  --radius: 8px;
+  --font-sans: "Inter Variable", sans-serif;
+  --font-mono: "Inter Variable", sans-serif;
+}

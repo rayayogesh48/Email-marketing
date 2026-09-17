@@ -1,0 +1,1 @@
+{"name":"reloopin-prototype-workspace","private":true,"scripts":{"dev":"npm --prefix reloopin run dev","build":"npm --prefix reloopin run build","start":"npm --prefix reloopin run start","lint":"npm --prefix reloopin run lint","test":"npm --prefix reloopin test"}}
