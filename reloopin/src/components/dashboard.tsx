@@ -63,6 +63,8 @@ import { FlowBuilder, RecipientSummary } from "./flow-builder";
 import { Branding, Settings } from "./settings";
 import { CampaignDetails } from "./campaign-details";
 import { ConversationPage } from "./conversation/conversation-page";
+import { AnalyticsModule } from "./analytics/analytics-module";
+import { MerchantDashboard } from "./dashboard/merchant-dashboard";
 const tabs = [
   "Templates",
   "Campaigns",
@@ -77,7 +79,7 @@ const nav = [
   { name: "Rewards", Icon: Gift },
   { name: "Customers", Icon: Users },
   { name: "Analytics", Icon: BarChart3 },
-  { name: "Emails", Icon: Mail },
+  { name: "Email marketing", Icon: Mail },
   { name: "Conversation", Icon: MessageCircle },
 ];
 type Confirm = {
@@ -137,7 +139,7 @@ export default function Dashboard({
 }: {
   campaignEditorId?: string;
   automationEditorId?: string;
-  workspace?: "emails" | "conversation";
+  workspace?: "dashboard" | "emails" | "conversation" | "analytics";
 }) {
   const flowEditorId = campaignEditorId || automationEditorId;
   const router = useRouter();
@@ -286,7 +288,11 @@ export default function Dashboard({
         setTab("Templates");
         setSearch("");
         setFilter("all");
-        if (flowEditorId) router.replace("/");
+        if (workspace === "dashboard") {
+          router.replace(`/dashboard?store=${s === "urban" ? "urban-goods" : "northstar-goods"}`);
+        } else if (flowEditorId) {
+          router.replace("/");
+        }
       } catch {
         toast.error("Could not load this store. Please retry.");
       }
@@ -540,14 +546,19 @@ export default function Dashboard({
           trigger={
             <div className="store-switch">
               <span className="store-avatar">
-                <span>✳</span>
+                <span>{store === "urban" ? "U" : store === "willow" ? "W" : "N"}</span>
               </span>
               <span>
                 <strong>
-                  {store === "northstar" ? "Northstar Goods" : "Willow & Co."}
+                  {store === "urban"
+                    ? "Urban Goods"
+                    : store === "willow"
+                    ? "Willow & Co."
+                    : "Northstar Goods"}
                 </strong>
                 <small>
-                  <span className="connection-dot" /> WooCommerce
+                  <span className="connection-dot" />{" "}
+                  {store === "urban" ? "Shopify" : "WooCommerce"}
                 </small>
               </span>
               <ChevronsUpDown size={14} />
@@ -559,6 +570,10 @@ export default function Dashboard({
               action: () => switchStore("northstar"),
             },
             {
+              label: "Urban Goods · Shopify",
+              action: () => switchStore("urban"),
+            },
+            {
               label: "Willow & Co. · WooCommerce",
               action: () => switchStore("willow"),
             },
@@ -566,35 +581,48 @@ export default function Dashboard({
         />
         <div className="nav-label">WORKSPACE</div>
         <nav>
-          {nav.map(({ name, Icon }) => (
-            <button
-              key={name}
-              className={`nav-item ${
-                (name === "Emails" && workspace === "emails") ||
-                (name === "Conversation" && workspace === "conversation")
-                  ? "nav-active"
-                  : ""
-              }`}
-              onClick={() => {
-                setMobileNav(false);
-                if (name === "Conversation") router.push("/conversation");
-                else if (name === "Emails") {
-                  if (workspace === "conversation") router.push("/");
-                  else goTab("Templates");
-                } else
-                  setInfo(
-                    `${name} is part of the wider Reloopin platform. This working prototype focuses on the complete Emails workspace.`,
-                  );
-              }}
-            >
-              <Icon size={19} />
-              <span>{name}</span>
-              {((name === "Emails" && workspace === "emails") ||
-                (name === "Conversation" && workspace === "conversation")) && (
-                <span className="nav-dot" />
-              )}
-            </button>
-          ))}
+          {nav.map(({ name, Icon }) => {
+            const isEmailNav = name === "Email marketing" || name === "Emails";
+            const isDashboardNav = name === "Dashboard";
+            const isAnalyticsNav = name === "Analytics";
+            const isConversationNav = name === "Conversation";
+
+            const isActive =
+              (isDashboardNav && workspace === "dashboard") ||
+              (isEmailNav && workspace === "emails") ||
+              (isAnalyticsNav && workspace === "analytics") ||
+              (isConversationNav && workspace === "conversation");
+
+            return (
+              <button
+                key={name}
+                className={`nav-item ${isActive ? "nav-active" : ""}`}
+                onClick={() => {
+                  setMobileNav(false);
+                  if (isDashboardNav) {
+                    if (workspace !== "dashboard") router.push("/dashboard");
+                  } else if (isConversationNav) {
+                    if (workspace !== "conversation") router.push("/conversation");
+                  } else if (isAnalyticsNav) {
+                    if (workspace !== "analytics") router.push("/analytics");
+                  } else if (isEmailNav) {
+                    if (workspace !== "emails") router.push("/");
+                    else goTab("Templates");
+                  } else if (name === "VIP tiers") {
+                    router.push("/analytics?tab=vip");
+                  } else {
+                    setInfo(
+                      `${name} is part of the wider Reloopin platform. You can review loyalty operations in the Dashboard and Analytics workspaces.`,
+                    );
+                  }
+                }}
+              >
+                <Icon size={19} />
+                <span>{name}</span>
+                {isActive && <span className="nav-dot" />}
+              </button>
+            );
+          })}
         </nav>
         <div className="nav-divider" />
         <nav>
@@ -690,15 +718,25 @@ export default function Dashboard({
             >
               <MenuIcon size={20} />
             </button>
-            {workspace === "conversation" ? (
+            {workspace === "analytics" ? (
+              <BarChart3 size={17} />
+            ) : workspace === "conversation" ? (
               <MessageCircle size={17} />
+            ) : workspace === "dashboard" ? (
+              <Home size={17} />
             ) : (
               <Mail size={17} />
             )}
             <span>Workspace</span>
             <ChevronRight size={13} />
             <strong>
-              {workspace === "conversation" ? "Conversation" : "Emails"}
+              {workspace === "analytics"
+                ? "Analytics"
+                : workspace === "conversation"
+                  ? "Conversation"
+                  : workspace === "dashboard"
+                    ? "Dashboard"
+                    : "Emails"}
             </strong>
           </div>
           <div className="topbar-right">
@@ -728,9 +766,13 @@ export default function Dashboard({
         <main
           className={`main-content ${
             workspace === "conversation" ? "conversation-main" : ""
+          } ${workspace === "analytics" ? "analytics-main" : ""} ${
+            workspace === "dashboard" ? "dashboard-main" : ""
           }`}
         >
           {workspace === "conversation" && <ConversationPage />}
+          {workspace === "analytics" && <AnalyticsModule store={store} />}
+          {workspace === "dashboard" && <MerchantDashboard initialStore={store} />}
           {showMain && (
             <>
               <div className="workspace-heading">
