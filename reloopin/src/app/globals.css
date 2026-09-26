@@ -383,6 +383,15 @@ hr {
   border-radius: 50%;
   background: var(--success);
 }
+.connection-dot.dot-warning {
+  background: var(--warning);
+}
+.connection-dot.dot-danger {
+  background: var(--destructive);
+}
+.connection-dot.dot-syncing {
+  background: var(--info);
+}
 .nav-label {
   font-size: 9px;
   font-weight: 600;

@@ -65,6 +65,11 @@ import { CampaignDetails } from "./campaign-details";
 import { ConversationPage } from "./conversation/conversation-page";
 import { AnalyticsModule } from "./analytics/analytics-module";
 import { MerchantDashboard } from "./dashboard/merchant-dashboard";
+import { IntegrationsModule } from "./integrations/integrations-module";
+import { useIntegrationsStore } from "@/lib/integrations/integrations-store";
+import { SettingsModule } from "./settings/settings-module";
+import { SettingsSection } from "@/lib/settings/settings-types";
+import Link from "next/link";
 const tabs = [
   "Templates",
   "Campaigns",
@@ -136,14 +141,38 @@ export default function Dashboard({
   campaignEditorId,
   automationEditorId,
   workspace = "emails",
+  settingsSection = "account",
+  integrationView = "list",
+  integrationId,
 }: {
   campaignEditorId?: string;
   automationEditorId?: string;
-  workspace?: "dashboard" | "emails" | "conversation" | "analytics";
+  workspace?:
+    | "dashboard"
+    | "emails"
+    | "conversation"
+    | "analytics"
+    | "integrations"
+    | "settings";
+  settingsSection?: SettingsSection;
+  integrationView?: "list" | "new" | "detail" | "edit";
+  integrationId?: string;
 }) {
   const flowEditorId = campaignEditorId || automationEditorId;
   const router = useRouter();
   const [store, setStore] = useState("northstar");
+  const { stores: integrationStores } = useIntegrationsStore();
+  const storeWorkspaces = integrationStores.filter((s) => s.isWorkspace);
+  const currentActiveStore =
+    storeWorkspaces.find((s) => s.id === store) ||
+    storeWorkspaces[0] || {
+      id: "northstar",
+      name: "Northstar Goods",
+      platform: "Shopify",
+      avatarLetter: "N",
+      status: "Connected" as const,
+      isWorkspace: true,
+    };
   const [data, setData] = useState<StoreData | null>(null);
   const [tab, setTab] = useState("Templates");
   const [search, setSearch] = useState("");
@@ -546,52 +575,78 @@ export default function Dashboard({
           trigger={
             <div className="store-switch">
               <span className="store-avatar">
-                <span>{store === "urban" ? "U" : store === "willow" ? "W" : "N"}</span>
+                <span>{currentActiveStore.avatarLetter}</span>
               </span>
               <span>
-                <strong>
-                  {store === "urban"
-                    ? "Urban Goods"
-                    : store === "willow"
-                    ? "Willow & Co."
-                    : "Northstar Goods"}
-                </strong>
+                <strong>{currentActiveStore.name}</strong>
                 <small>
-                  <span className="connection-dot" />{" "}
-                  {store === "urban" ? "Shopify" : "WooCommerce"}
+                  <span
+                    className={`connection-dot ${
+                      currentActiveStore.status === "Needs attention"
+                        ? "dot-warning"
+                        : currentActiveStore.status === "Disconnected"
+                        ? "dot-danger"
+                        : currentActiveStore.status === "Syncing"
+                        ? "dot-syncing"
+                        : ""
+                    }`}
+                  />{" "}
+                  {currentActiveStore.platform}
                 </small>
               </span>
               <ChevronsUpDown size={14} />
             </div>
           }
-          items={[
-            {
-              label: "Northstar Goods · WooCommerce",
-              action: () => switchStore("northstar"),
-            },
-            {
-              label: "Urban Goods · Shopify",
-              action: () => switchStore("urban"),
-            },
-            {
-              label: "Willow & Co. · WooCommerce",
-              action: () => switchStore("willow"),
-            },
-          ]}
+          items={storeWorkspaces.map((ws) => ({
+            label: `${ws.name} · ${ws.platform} (${ws.status})`,
+            action: () => switchStore(ws.id),
+          }))}
         />
         <div className="nav-label">WORKSPACE</div>
         <nav>
-          {nav.map(({ name, Icon }) => {
+          {[
+            { name: "Dashboard", Icon: Home, href: "/dashboard" },
+            { name: "Points", Icon: Coins, href: null },
+            { name: "VIP tiers", Icon: Crown, href: "/analytics?tab=vip" },
+            { name: "Rewards", Icon: Gift, href: null },
+            { name: "Customers", Icon: Users, href: null },
+            { name: "Analytics", Icon: BarChart3, href: "/analytics" },
+            { name: "Email marketing", Icon: Mail, href: "/" },
+            { name: "Conversation", Icon: MessageCircle, href: "/conversation" },
+            { name: "Settings", Icon: SettingsIcon, href: "/settings" },
+          ].map(({ name, Icon, href }) => {
             const isEmailNav = name === "Email marketing" || name === "Emails";
             const isDashboardNav = name === "Dashboard";
             const isAnalyticsNav = name === "Analytics";
             const isConversationNav = name === "Conversation";
+            const isSettingsNav = name === "Settings";
 
             const isActive =
               (isDashboardNav && workspace === "dashboard") ||
               (isEmailNav && workspace === "emails") ||
               (isAnalyticsNav && workspace === "analytics") ||
-              (isConversationNav && workspace === "conversation");
+              (isConversationNav && workspace === "conversation") ||
+              (isSettingsNav && workspace === "settings");
+
+            if (href) {
+              return (
+                <Link
+                  key={name}
+                  href={href}
+                  className={`nav-item ${isActive ? "nav-active" : ""}`}
+                  onClick={() => {
+                    setMobileNav(false);
+                    if (isEmailNav && workspace === "emails") {
+                      goTab("Templates");
+                    }
+                  }}
+                >
+                  <Icon size={19} />
+                  <span>{name}</span>
+                  {isActive && <span className="nav-dot" />}
+                </Link>
+              );
+            }
 
             return (
               <button
@@ -599,22 +654,9 @@ export default function Dashboard({
                 className={`nav-item ${isActive ? "nav-active" : ""}`}
                 onClick={() => {
                   setMobileNav(false);
-                  if (isDashboardNav) {
-                    if (workspace !== "dashboard") router.push("/dashboard");
-                  } else if (isConversationNav) {
-                    if (workspace !== "conversation") router.push("/conversation");
-                  } else if (isAnalyticsNav) {
-                    if (workspace !== "analytics") router.push("/analytics");
-                  } else if (isEmailNav) {
-                    if (workspace !== "emails") router.push("/");
-                    else goTab("Templates");
-                  } else if (name === "VIP tiers") {
-                    router.push("/analytics?tab=vip");
-                  } else {
-                    setInfo(
-                      `${name} is part of the wider Reloopin platform. You can review loyalty operations in the Dashboard and Analytics workspaces.`,
-                    );
-                  }
+                  setInfo(
+                    `${name} is part of the wider Reloopin platform. You can review loyalty operations in the Dashboard and Analytics workspaces.`,
+                  );
                 }}
               >
                 <Icon size={19} />
@@ -627,24 +669,51 @@ export default function Dashboard({
         <div className="nav-divider" />
         <nav>
           {[
-            { name: "Integrations", Icon: Plug },
-            { name: "Billing", Icon: CreditCard },
-            { name: "Team", Icon: Users },
-            { name: "Account settings", Icon: SettingsIcon },
-          ].map(({ name, Icon }) => (
-            <button
-              className="nav-item"
-              key={name}
-              onClick={() =>
-                setInfo(
-                  `${name} belongs to the wider platform. Email sender configuration is available in Emails → Settings.`,
-                )
-              }
-            >
-              <Icon size={18} />
-              <span>{name}</span>
-            </button>
-          ))}
+            { name: "Integrations", Icon: Plug, href: "/integrations" },
+            { name: "Billing", Icon: CreditCard, href: null },
+            { name: "Team", Icon: Users, href: "/settings?section=team" },
+            { name: "Account settings", Icon: SettingsIcon, href: "/settings?section=account" },
+          ].map(({ name, Icon, href }) => {
+            const isIntegrations = name === "Integrations";
+            const isTeam = name === "Team";
+            const isAccountSettings = name === "Account settings";
+            const isActive =
+              (isIntegrations && workspace === "integrations") ||
+              (isTeam && workspace === "settings" && settingsSection === "team") ||
+              (isAccountSettings && workspace === "settings" && settingsSection !== "team");
+
+            if (href) {
+              return (
+                <Link
+                  className={`nav-item ${isActive ? "nav-active" : ""}`}
+                  key={name}
+                  href={href}
+                  onClick={() => setMobileNav(false)}
+                >
+                  <Icon size={18} />
+                  <span>{name}</span>
+                  {isActive && <span className="nav-dot" />}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                className={`nav-item ${isActive ? "nav-active" : ""}`}
+                key={name}
+                onClick={() => {
+                  setMobileNav(false);
+                  setInfo(
+                    `${name} belongs to the wider platform. Store profile and team access can be managed in Team and Account settings.`,
+                  );
+                }}
+              >
+                <Icon size={18} />
+                <span>{name}</span>
+                {isActive && <span className="nav-dot" />}
+              </button>
+            );
+          })}
         </nav>
         <div className="sidebar-bottom">
           <div className="help-card">
@@ -718,25 +787,33 @@ export default function Dashboard({
             >
               <MenuIcon size={20} />
             </button>
-            {workspace === "analytics" ? (
+            {workspace === "integrations" ? (
+              <Plug size={17} />
+            ) : workspace === "analytics" ? (
               <BarChart3 size={17} />
             ) : workspace === "conversation" ? (
               <MessageCircle size={17} />
             ) : workspace === "dashboard" ? (
               <Home size={17} />
+            ) : workspace === "settings" ? (
+              <SettingsIcon size={17} />
             ) : (
               <Mail size={17} />
             )}
             <span>Workspace</span>
             <ChevronRight size={13} />
             <strong>
-              {workspace === "analytics"
+              {workspace === "integrations"
+                ? "Integrations"
+                : workspace === "analytics"
                 ? "Analytics"
                 : workspace === "conversation"
                   ? "Conversation"
                   : workspace === "dashboard"
                     ? "Dashboard"
-                    : "Emails"}
+                    : workspace === "settings"
+                      ? "Settings"
+                      : "Emails"}
             </strong>
           </div>
           <div className="topbar-right">
@@ -760,7 +837,13 @@ export default function Dashboard({
               <Bell size={19} />
             </button>
             <span className="topbar-divider" />
-            <span className="avatar small">AL</span>
+            <Link
+              href="/settings?section=account"
+              className="avatar small hover:opacity-80 transition-opacity"
+              title="Account settings"
+            >
+              AL
+            </Link>
           </div>
         </header>
         <main
@@ -768,11 +851,26 @@ export default function Dashboard({
             workspace === "conversation" ? "conversation-main" : ""
           } ${workspace === "analytics" ? "analytics-main" : ""} ${
             workspace === "dashboard" ? "dashboard-main" : ""
+          } ${workspace === "integrations" ? "integrations-main" : ""} ${
+            workspace === "settings" ? "settings-main p-0 overflow-visible" : ""
           }`}
         >
           {workspace === "conversation" && <ConversationPage />}
           {workspace === "analytics" && <AnalyticsModule store={store} />}
           {workspace === "dashboard" && <MerchantDashboard initialStore={store} />}
+          {workspace === "integrations" && (
+            <IntegrationsModule
+              view={integrationView}
+              integrationId={integrationId}
+              onSwitchStore={switchStore}
+            />
+          )}
+          {workspace === "settings" && (
+            <SettingsModule
+              section={settingsSection}
+              onSwitchStore={switchStore}
+            />
+          )}
           {showMain && (
             <>
               <div className="workspace-heading">
