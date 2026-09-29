@@ -15,7 +15,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { BrandingConfig } from "@/lib/onboarding/onboarding-types";
 import { PRESET_BRAND_COLORS } from "@/lib/onboarding/onboarding-data";
-import { validateHexColor } from "@/lib/onboarding/onboarding-validation";
+import {
+  validateHexColor,
+  getReadableBrandForeground,
+} from "@/lib/onboarding/onboarding-validation";
 
 export function WidgetPreview({
   data,
@@ -35,21 +38,27 @@ export function WidgetPreview({
         ? "#ZZZZZZ"
         : overrideState === "low_contrast"
           ? "#FACC15" // yellow with low contrast
-          : data.brandColor || "#4F46E5"
+          : data.brandColor || "#4F46E5",
   );
   const [storeName] = useState(data.storeName || "Northstar Goods");
   const [previewMode, setPreviewMode] = useState<"launcher" | "open">(
-    data.previewMode || "open"
+    overrideState === "launcher"
+      ? "launcher"
+      : overrideState === "open_widget"
+        ? "open"
+        : data.previewMode || "open",
   );
   const [previewCustomer, setPreviewCustomer] = useState<"existing" | "new">(
-    data.previewCustomer || "existing"
+    data.previewCustomer || "existing",
   );
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(overrideState === "saved");
   const [previewError, setPreviewError] = useState(
-    overrideState === "preview_failed"
+    overrideState === "preview_failed",
   );
 
   const validation = validateHexColor(brandColor);
+  // Normal-sized customer text must meet AA, including light brand colors.
+  const previewForeground = getReadableBrandForeground(brandColor);
 
   const handleColorChange = (hex: string) => {
     setBrandColor(hex);
@@ -81,14 +90,14 @@ export function WidgetPreview({
   };
 
   return (
-    <div className="max-w-[960px] mx-auto py-8 sm:py-10 px-4">
+    <div className="onboarding-content-panel onboarding-branding-panel">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--foreground)]">
-          Match your brand
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+          Make it feel like your store
         </h1>
         <p className="text-sm text-[var(--muted-foreground)] mt-1.5 leading-relaxed">
-          Choose a color for the loyalty widget customers will see in your store.
+          Choose how your loyalty widget appears to customers.
         </p>
       </div>
 
@@ -97,7 +106,7 @@ export function WidgetPreview({
         {/* Left Column: Configuration (7 cols ≈ 56%) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Brand Color Config Card */}
-          <div className="p-6 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-2xs space-y-5">
+          <div className="branding-controls space-y-5">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-semibold text-[var(--foreground)]">
@@ -118,6 +127,7 @@ export function WidgetPreview({
                 <div className="relative">
                   <input
                     type="color"
+                    aria-label="Pick brand color"
                     value={validation.valid ? brandColor : "#4F46E5"}
                     onChange={(e) => handleColorChange(e.target.value)}
                     className="w-10 h-10 rounded-lg cursor-pointer border border-[var(--border)] bg-transparent p-0.5"
@@ -130,6 +140,8 @@ export function WidgetPreview({
                   </span>
                   <input
                     type="text"
+                    aria-label="Primary brand color"
+                    aria-invalid={!validation.valid}
                     value={brandColor}
                     onChange={(e) => handleColorChange(e.target.value)}
                     placeholder="#4F46E5"
@@ -146,7 +158,10 @@ export function WidgetPreview({
 
               {/* Validation Feedback */}
               {!validation.valid && (
-                <p className="text-xs font-medium text-[var(--destructive)] mt-2 flex items-center gap-1.5">
+                <p
+                  role="alert"
+                  className="text-xs font-medium text-[var(--destructive)] mt-2 flex items-center gap-1.5"
+                >
                   <AlertTriangle size={13} />
                   <span>{validation.errorMessage}</span>
                 </p>
@@ -155,16 +170,24 @@ export function WidgetPreview({
               {validation.valid && !validation.accessible && (
                 <div className="p-3 mt-3 rounded-lg bg-[var(--warning-container)]/30 border border-[var(--warning)]/40 text-xs text-[var(--foreground)] space-y-2">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle size={14} className="text-[var(--warning)] shrink-0 mt-0.5" />
+                    <AlertTriangle
+                      size={14}
+                      className="text-[var(--warning)] shrink-0 mt-0.5"
+                    />
                     <div>
-                      <span className="font-semibold">This color may be difficult to read:</span> White text on this background has a contrast ratio of only {validation.contrastRatio}:1.
+                      <span className="font-semibold">
+                        This color may be difficult to read:
+                      </span>{" "}
+                      White text on this background has a contrast ratio of only{" "}
+                      {validation.contrastRatio}:1.
                     </div>
                   </div>
 
                   {validation.recommendedColor && (
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-[var(--muted-foreground)]">
-                        Recommended accessible shade: {validation.recommendedColor}
+                        Recommended accessible shade:{" "}
+                        {validation.recommendedColor}
                       </span>
                       <Button
                         variant="outline"
@@ -255,7 +278,7 @@ export function WidgetPreview({
                   variant="default"
                   size="sm"
                   onClick={handleSave}
-                  disabled={!validation.valid}
+                  disabled={!validation.valid || overrideState === "saving"}
                   className="text-xs h-9 px-4 font-semibold"
                 >
                   Save branding
@@ -267,7 +290,7 @@ export function WidgetPreview({
                   onClick={onContinue}
                   className="text-xs h-9 px-4 font-semibold"
                 >
-                  Review setup
+                  Finish setup
                 </Button>
               )}
             </div>
@@ -275,7 +298,7 @@ export function WidgetPreview({
         </div>
 
         {/* Right Column: Live Widget Preview (5 cols ≈ 44%) */}
-        <div className="lg:col-span-5 space-y-3">
+        <div className="branding-live-preview space-y-3">
           {/* Controls toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-[var(--muted)]/50 border border-[var(--border)] text-xs">
             {/* Launcher vs Open */}
@@ -346,7 +369,10 @@ export function WidgetPreview({
 
             {previewError ? (
               <div className="my-auto text-center p-6 space-y-3">
-                <AlertTriangle size={24} className="text-[var(--warning)] mx-auto" />
+                <AlertTriangle
+                  size={24}
+                  className="text-[var(--warning)] mx-auto"
+                />
                 <h4 className="text-xs font-bold text-[var(--foreground)]">
                   Preview unavailable
                 </h4>
@@ -367,13 +393,15 @@ export function WidgetPreview({
               /* LAUNCHER PREVIEW */
               <div className="my-auto flex flex-col items-center justify-center p-8 text-center space-y-4">
                 <p className="text-xs text-[var(--muted-foreground)] max-w-[220px]">
-                  The floating widget launcher stays anchored in your store&apos;s bottom-right corner.
+                  The floating widget launcher stays anchored in your
+                  store&apos;s bottom-right corner.
                 </p>
 
                 <div
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg text-white font-semibold text-xs transition-transform hover:scale-105 cursor-pointer"
                   style={{
                     backgroundColor: validation.valid ? brandColor : "#4F46E5",
+                    color: previewForeground,
                   }}
                 >
                   <Gift size={16} />
@@ -388,13 +416,17 @@ export function WidgetPreview({
                   className="p-5 text-white flex flex-col justify-between"
                   style={{
                     backgroundColor: validation.valid ? brandColor : "#4F46E5",
+                    color: previewForeground,
                   }}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold tracking-tight">
+                    <span className="text-xs font-semibold tracking-tight">
                       {storeName} Rewards
                     </span>
-                    <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                    <span
+                      className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]"
+                      aria-hidden="true"
+                    >
                       ✕
                     </span>
                   </div>
@@ -438,15 +470,21 @@ export function WidgetPreview({
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="p-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)]/40 cursor-pointer text-center">
-                          <ShoppingBag size={14} className="mx-auto mb-1 text-[var(--primary)]" />
+                          <ShoppingBag
+                            size={14}
+                            className="mx-auto mb-1 text-[var(--primary)]"
+                          />
                           <span className="text-[10px] font-semibold text-[var(--foreground)] block">
                             Earn points
                           </span>
                         </div>
                         <div className="p-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)]/40 cursor-pointer text-center">
-                          <Gift size={14} className="mx-auto mb-1 text-[var(--secondary)]" />
+                          <Gift
+                            size={14}
+                            className="mx-auto mb-1 text-[var(--secondary)]"
+                          />
                           <span className="text-[10px] font-semibold text-[var(--foreground)] block">
-                            Redeem rewards
+                            View rewards
                           </span>
                         </div>
                       </div>
@@ -455,11 +493,17 @@ export function WidgetPreview({
                     <div className="py-2 text-center space-y-3">
                       <div className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)] text-left space-y-1 text-[11px] text-[var(--muted-foreground)]">
                         <div className="flex items-center gap-1.5 font-semibold text-[var(--foreground)]">
-                          <CheckCircle2 size={12} className="text-[var(--secondary)]" />
+                          <CheckCircle2
+                            size={12}
+                            className="text-[var(--secondary)]"
+                          />
                           <span>Earn 1 point per $1 spent</span>
                         </div>
                         <div className="flex items-center gap-1.5 font-semibold text-[var(--foreground)]">
-                          <CheckCircle2 size={12} className="text-[var(--secondary)]" />
+                          <CheckCircle2
+                            size={12}
+                            className="text-[var(--secondary)]"
+                          />
                           <span>Exclusive VIP tier perks</span>
                         </div>
                       </div>
@@ -468,7 +512,10 @@ export function WidgetPreview({
                         type="button"
                         className="w-full py-2 rounded-lg text-white font-semibold text-xs shadow-xs cursor-pointer transition-opacity hover:opacity-95"
                         style={{
-                          backgroundColor: validation.valid ? brandColor : "#4F46E5",
+                          backgroundColor: validation.valid
+                            ? brandColor
+                            : "#4F46E5",
+                          color: previewForeground,
                         }}
                       >
                         Join rewards
@@ -482,7 +529,8 @@ export function WidgetPreview({
             {/* Safe small note */}
             <div className="pt-2 text-center">
               <span className="text-[10px] text-[var(--muted-foreground)]">
-                Visual preview only · Fully interactive on storefront after launch
+                Visual preview only · Fully interactive on storefront after
+                launch
               </span>
             </div>
           </div>

@@ -11,9 +11,13 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    await expect(page.locator("h1")).toContainText("Set up your loyalty program");
+    await expect(page.locator("h1")).toContainText(
+      "Set up your loyalty program",
+    );
     await expect(page.getByText("Takes about 5-10 minutes")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Connect your store" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Connect your store" }),
+    ).toBeVisible();
     await expect(page.getByText("Create an earning rule")).toBeVisible();
     await expect(page.getByText("Set up VIP tiers")).toBeVisible();
     await expect(page.getByText("Match your brand")).toBeVisible();
@@ -29,11 +33,13 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
     // Fill store URL and click Connect store
     const storeInput = page.locator("#store-url");
     await expect(storeInput).toHaveValue("https://northstargoods.com");
-    await page.getByRole("button", { name: "Connect store", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Connect store", exact: true })
+      .click();
 
     // Progress through Connecting -> Waiting for approval
     await expect(
-      page.getByText("Approve the connection in WooCommerce")
+      page.getByText("Approve the connection in WooCommerce"),
     ).toBeVisible({ timeout: 6000 });
 
     // Click "I've approved access"
@@ -41,22 +47,29 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
 
     // Progress through Verifying -> Connected
     await expect(
-      page.getByText("Northstar Goods is connected successfully")
+      page.getByText("Northstar Goods is connected successfully"),
     ).toBeVisible({ timeout: 6000 });
 
     // Click Start syncing
     await page.getByRole("button", { name: "Start syncing" }).click();
 
     // Wait for Sync complete
-    await expect(page.getByText("Your store is ready")).toBeVisible({ timeout: 6000 });
+    await expect(page.getByText("Your store is ready")).toBeVisible({
+      timeout: 6000,
+    });
     await expect(page.getByText("2,486").first()).toBeVisible();
 
     // Continue to Step 2: Earning Rule
-    await page.getByRole("button", { name: "Continue to earning rule" }).first().click();
+    await page
+      .getByRole("button", { name: "Continue to points rule" })
+      .first()
+      .click();
 
     // 3. Step 2: Earning Rule
-    await expect(page.locator("h1")).toContainText("Choose how customers earn points");
-    await expect(page.getByLabel("Rule name")).toHaveValue("Points for purchases");
+    await expect(page.locator("h1")).toContainText("Set your earning rule");
+    await expect(page.getByLabel("Rule name")).toHaveValue(
+      "Points for purchases",
+    );
 
     // Verify live preview card shows default 50 points
     await expect(page.getByText("50 points")).toBeVisible();
@@ -73,7 +86,10 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
     await expect(page.getByText("Earning rule saved")).toBeVisible();
 
     // Continue to VIP tiers
-    await page.getByRole("button", { name: "Continue to VIP tiers" }).first().click();
+    await page
+      .getByRole("button", { name: "Continue to VIP tiers" })
+      .first()
+      .click();
 
     // 4. Step 3: VIP Tiers
     await expect(page.locator("h1")).toContainText("Set up your VIP tiers");
@@ -98,16 +114,23 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
     await expect(page.getByText("VIP tiers saved")).toBeVisible();
 
     // Continue to Branding
-    await page.getByRole("button", { name: "Continue to branding" }).first().click();
+    await page
+      .getByRole("button", { name: "Continue to branding" })
+      .first()
+      .click();
 
     // 5. Step 4: Branding
-    await expect(page.locator("h1")).toContainText("Match your brand");
+    await expect(page.locator("h1")).toContainText(
+      "Make it feel like your store",
+    );
     await expect(page.getByText("Primary brand color")).toBeVisible();
     await expect(page.getByText("Northstar Goods Storefront")).toBeVisible();
 
     // Toggle preview modes
     await page.getByRole("button", { name: "Launcher" }).click();
-    await expect(page.getByText("floating widget launcher stays anchored")).toBeVisible();
+    await expect(
+      page.getByText("floating widget launcher stays anchored"),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Open widget" }).click();
     await expect(page.getByText("Northstar Goods Rewards")).toBeVisible();
@@ -124,33 +147,45 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
     await expect(page.getByText("Branding saved")).toBeVisible();
 
     // Continue to Review setup
-    await page.getByRole("button", { name: "Review setup" }).first().click();
+    await page.getByRole("button", { name: "Finish setup" }).first().click();
 
     // 6. Review Setup
-    await expect(page.locator("h1")).toContainText("Review your loyalty program");
+    await expect(page.locator("h1")).toContainText(
+      "Review your loyalty program",
+    );
     await expect(page.getByText("Connected Store")).toBeVisible();
     await expect(page.getByText("Purchase Earning Rule")).toBeVisible();
     await expect(page.getByText("VIP Milestones")).toBeVisible();
     await expect(page.getByText("Store Widget Branding")).toBeVisible();
 
     // Trigger Activation
-    await page.getByRole("button", { name: "Activate loyalty program" }).first().click();
-    await expect(page.getByText("Activate your loyalty program?")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Activate loyalty program" })
+      .first()
+      .click();
+    await expect(
+      page.getByText("Activate your loyalty program?"),
+    ).toBeVisible();
 
     // Confirm Activation
     await page.getByRole("button", { name: "Activate program" }).click();
 
     // Activating animation sequence
-    await expect(page.getByText("Activating your loyalty program")).toBeVisible();
+    await expect(
+      page.getByText("Activating your loyalty program"),
+    ).toBeVisible();
 
     // 7. Success Screen
-    await expect(page.locator("h1")).toContainText("Your loyalty program is live", {
-      timeout: 8000,
-    });
+    await expect(page.locator("h1")).toContainText(
+      "Your loyalty program is ready",
+      {
+        timeout: 8000,
+      },
+    );
     await expect(page.getByText("Completed launch milestones")).toBeVisible();
 
     // Preview customer widget
-    await page.getByRole("button", { name: "Preview customer experience" }).click();
+    await page.getByRole("button", { name: "Preview customer widget" }).click();
     await expect(page.getByText("Storefront Customer Widget")).toBeVisible();
     await page.getByRole("button", { name: "Close preview" }).click();
 
@@ -159,7 +194,9 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
 
     // 8. Dashboard Transition with Guided Tour
     await expect(page).toHaveURL(/.*dashboard/);
-    await expect(page.getByText("Dashboard Tour")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Dashboard Tour")).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.getByText("Program Performance")).toBeVisible();
 
     // Progress through tour
@@ -183,7 +220,7 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
             currentStep: "vip-tiers",
             completedSteps: ["connect-store", "points-rule"],
             onboardingCompleted: false,
-          })
+          }),
         );
       } catch {
         // ignore
@@ -192,11 +229,15 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
 
     await page.goto("/onboarding");
     await expect(
-      page.getByText("Continue setting up your loyalty program")
+      page.getByText("Continue setting up your loyalty program"),
     ).toBeVisible();
     await expect(page.getByText("You completed 2 of 4 steps")).toBeVisible();
-    await expect(page.getByText("Store connected and data synced")).toBeVisible();
-    await expect(page.getByText("Purchase earning rule configured")).toBeVisible();
+    await expect(
+      page.getByText("Store connected and data synced"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Purchase earning rule configured"),
+    ).toBeVisible();
 
     // Click Continue setup -> should land on next incomplete step (vip-tiers)
     await page.getByRole("button", { name: "Continue setup" }).click();
@@ -215,7 +256,9 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
     // Select Partial sync warning
     await page.getByRole("button", { name: "Partial sync warning" }).click();
     await expect(page).toHaveURL(/.*state=partial_sync/);
-    await expect(page.getByText("Some store data could not be synced")).toBeVisible();
+    await expect(
+      page.getByText("Some store data could not be synced"),
+    ).toBeVisible();
 
     // Open Preview states panel again and choose Invalid hex color
     await page.getByRole("button", { name: "Preview states" }).click();
@@ -238,5 +281,140 @@ test.describe("Reloopin Merchant Onboarding Prototype", () => {
 
     // Land on dashboard
     await expect(page).toHaveURL(/.*dashboard/);
+  });
+  test("same-step preview presets update immediately without changing saved settings", async ({
+    page,
+  }) => {
+    await page.goto("/onboarding?step=points-rule");
+    await page
+      .getByRole("button", { name: "Save earning rule", exact: true })
+      .click();
+    const original = await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("reloopin_onboarding_v1") || "{}")
+          .earningRule,
+    );
+    await page
+      .getByRole("button", { name: "Preview states", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Custom rate (2 pts / $1)", exact: true })
+      .click();
+    await expect(
+      page.getByRole("spinbutton", { name: "Customers earn" }),
+    ).toHaveValue("2");
+    await expect(page.getByText("100 points", { exact: true })).toBeVisible();
+    await page
+      .getByRole("button", { name: "Preview states", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Validation errors", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Points must be greater than 0." }),
+    ).toContainText("Points must be greater than 0.");
+    await page
+      .getByRole("button", { name: "Preview states", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Rule saved state", exact: true })
+      .click();
+    await expect(
+      page.getByText("Earning rule saved", { exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("reloopin_onboarding_v1") || "{}")
+            .earningRule,
+      ),
+    ).toEqual(original);
+  });
+
+  test("tier previews expose validation and keep dialog keyboard behavior", async ({
+    page,
+  }) => {
+    await page.goto("/onboarding?step=vip-tiers&state=invalid_thresholds");
+    await expect(
+      page.getByText("Each tier needs a different points threshold."),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Preview states", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Editing tier", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByRole("textbox", { name: "Tier name" }),
+    ).toHaveValue("Silver");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+  });
+
+  test("light widget colors use a readable foreground in member, guest and launcher previews", async ({
+    page,
+  }) => {
+    await page.goto("/onboarding?step=branding&state=low_contrast");
+    const colorInput = page.getByRole("textbox", {
+      name: "Primary brand color",
+    });
+    await expect(colorInput).toHaveValue("#FACC15");
+    await expect(page.getByText("Maya Chen")).toHaveCSS(
+      "color",
+      "rgb(9, 9, 11)",
+    );
+    await page.getByRole("button", { name: "Guest", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Join rewards", exact: true }),
+    ).toHaveCSS("color", "rgb(9, 9, 11)");
+    await page.getByRole("button", { name: "Launcher", exact: true }).click();
+    await expect(page.getByText("Rewards", { exact: true })).toHaveCSS(
+      "color",
+      "rgb(9, 9, 11)",
+    );
+    await colorInput.fill("#0F766E");
+    await expect(page.getByText("Rewards", { exact: true })).toHaveCSS(
+      "color",
+      "rgb(255, 255, 255)",
+    );
+  });
+
+  test("all four steps fit mobile widths and show accurate progress", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const [index, step] of [
+      "connect-store",
+      "points-rule",
+      "vip-tiers",
+      "branding",
+    ].entries()) {
+      await page.goto(`/onboarding?step=${step}`);
+      await expect(page.locator("h1")).toBeVisible();
+      await expect(
+        page.getByText(`Step ${index + 1} of 4`, { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        String((index + 1) * 25),
+      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(390);
+      if (index > 0) {
+        const nav = page.getByRole("navigation", {
+          name: "Onboarding step progress",
+        });
+        await expect(nav.getByRole("button").nth(index)).toHaveAttribute(
+          "aria-current",
+          "step",
+        );
+        for (let next = index + 1; next < 4; next++)
+          await expect(nav.getByRole("button").nth(next)).toBeDisabled();
+      }
+    }
   });
 });

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/dialog";
+import { getReadableBrandForeground } from "@/lib/onboarding/onboarding-validation";
 import { OnboardingState } from "@/lib/onboarding/onboarding-types";
 
 export function SuccessScreen({
@@ -23,13 +24,26 @@ export function SuccessScreen({
   state: OnboardingState;
   onGoToDashboard: () => void;
 }) {
-  const [showCustomerPreviewModal, setShowCustomerPreviewModal] = useState(false);
+  const [showCustomerPreviewModal, setShowCustomerPreviewModal] =
+    useState(false);
 
   const completedChecklist = [
-    { title: "Store connected", desc: `${state.storeConnection.storeName || "Northstar Goods"} via WooCommerce` },
-    { title: "Earning rule active", desc: `${state.earningRule.pointsEarned || 1} point per $${state.earningRule.perOrderSpend || 1} spent` },
-    { title: "VIP tiers published", desc: `${state.vipTiers.length} tier progression live` },
-    { title: "Widget branded", desc: `Storefront widget styled with ${state.branding.brandColor || "#4F46E5"}` },
+    {
+      title: "Store connected",
+      desc: `${state.storeConnection.storeName || "Northstar Goods"} via WooCommerce`,
+    },
+    {
+      title: "Earning rule created",
+      desc: `${state.earningRule.pointsEarned || 1} point per $${state.earningRule.perOrderSpend || 1} spent`,
+    },
+    {
+      title: "VIP tiers configured",
+      desc: `${state.vipTiers.length} tier progression live`,
+    },
+    {
+      title: "Widget customized",
+      desc: `Storefront widget styled with ${state.branding.brandColor || "#4F46E5"}`,
+    },
   ];
 
   const optionalNextSteps = [
@@ -54,18 +68,19 @@ export function SuccessScreen({
   ];
 
   return (
-    <div className="max-w-[700px] mx-auto py-8 sm:py-12 px-4 text-center">
+    <div className="onboarding-success-panel text-center">
       {/* Hero Badge & Title */}
       <div className="mb-8">
         <div className="w-16 h-16 rounded-2xl bg-[var(--secondary-container)] text-[var(--secondary)] flex items-center justify-center mx-auto mb-4 shadow-sm">
           <Sparkles size={32} />
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)]">
-          Your loyalty program is live
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+          Your loyalty program is ready
         </h1>
         <p className="text-sm text-[var(--muted-foreground)] mt-2 max-w-md mx-auto leading-relaxed">
-          Customers can now earn points from eligible orders at {state.storeConnection.storeName || "Northstar Goods"}.
+          Your store is connected, earning rules are active, and customers can
+          start collecting points.
         </p>
       </div>
 
@@ -80,10 +95,17 @@ export function SuccessScreen({
               key={item.title}
               className="p-3 rounded-lg bg-[var(--muted)]/40 border border-[var(--border)] flex items-start gap-2.5"
             >
-              <CheckCircle2 size={16} className="text-[var(--secondary)] shrink-0 mt-0.5" />
+              <CheckCircle2
+                size={16}
+                className="text-[var(--secondary)] shrink-0 mt-0.5"
+              />
               <div>
-                <h5 className="text-xs font-bold text-[var(--foreground)]">{item.title}</h5>
-                <p className="text-[11px] text-[var(--muted-foreground)]">{item.desc}</p>
+                <h5 className="text-xs font-bold text-[var(--foreground)]">
+                  {item.title}
+                </h5>
+                <p className="text-[11px] text-[var(--muted-foreground)]">
+                  {item.desc}
+                </p>
               </div>
             </div>
           ))}
@@ -109,7 +131,7 @@ export function SuccessScreen({
           className="w-full sm:w-auto h-10 px-4 text-xs gap-1.5"
         >
           <ExternalLink size={13} />
-          <span>Preview customer experience</span>
+          <span>Preview customer widget</span>
         </Button>
       </div>
 
@@ -119,7 +141,9 @@ export function SuccessScreen({
           <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
             Recommended growth steps
           </h4>
-          <span className="text-[10px] text-[var(--muted-foreground)]">Optional</span>
+          <span className="text-[10px] text-[var(--muted-foreground)]">
+            Optional
+          </span>
         </div>
 
         <div className="space-y-2.5">
@@ -135,8 +159,12 @@ export function SuccessScreen({
                     <Icon size={15} />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-[var(--foreground)]">{step.title}</h5>
-                    <p className="text-[11px] text-[var(--muted-foreground)]">{step.desc}</p>
+                    <h5 className="text-xs font-bold text-[var(--foreground)]">
+                      {step.title}
+                    </h5>
+                    <p className="text-[11px] text-[var(--muted-foreground)]">
+                      {step.desc}
+                    </p>
                   </div>
                 </div>
 
@@ -165,10 +193,15 @@ export function SuccessScreen({
           <div className="w-full max-w-[340px] mx-auto rounded-2xl border border-[var(--border)] shadow-lg overflow-hidden bg-[var(--background)]">
             <div
               className="p-5 text-white"
-              style={{ backgroundColor: state.branding.brandColor || "#4F46E5" }}
+              style={{
+                backgroundColor: state.branding.brandColor || "#4F46E5",
+                color: getReadableBrandForeground(
+                  state.branding.brandColor || "#4F46E5",
+                ),
+              }}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold tracking-tight">
+                <span className="text-xs font-semibold tracking-tight">
                   {state.branding.storeName || "Northstar Goods"} Rewards
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20">
@@ -187,9 +220,13 @@ export function SuccessScreen({
               <div className="p-2.5 rounded-lg bg-[var(--muted)]/50 border border-[var(--border)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Crown size={14} className="text-[var(--warning)]" />
-                  <span className="font-semibold text-[var(--foreground)]">Gold Member</span>
+                  <span className="font-semibold text-[var(--foreground)]">
+                    Gold Member
+                  </span>
                 </div>
-                <span className="text-[10px] text-[var(--muted-foreground)]">Tier 2</span>
+                <span className="text-[10px] text-[var(--muted-foreground)]">
+                  Tier 2
+                </span>
               </div>
 
               <div className="p-3 rounded-lg border border-[var(--border)] text-left space-y-1">
@@ -198,7 +235,8 @@ export function SuccessScreen({
                   <span>Next order earns points</span>
                 </div>
                 <p className="text-[11px] text-[var(--muted-foreground)]">
-                  Earn {state.earningRule.pointsEarned || 1} point per ${state.earningRule.perOrderSpend || 1} spent.
+                  Earn {state.earningRule.pointsEarned || 1} point per $
+                  {state.earningRule.perOrderSpend || 1} spent.
                 </p>
               </div>
 
@@ -207,7 +245,12 @@ export function SuccessScreen({
                 size="sm"
                 onClick={() => setShowCustomerPreviewModal(false)}
                 className="w-full text-xs h-8 font-semibold"
-                style={{ backgroundColor: state.branding.brandColor || "#4F46E5" }}
+                style={{
+                  backgroundColor: state.branding.brandColor || "#4F46E5",
+                  color: getReadableBrandForeground(
+                    state.branding.brandColor || "#4F46E5",
+                  ),
+                }}
               >
                 Close preview
               </Button>

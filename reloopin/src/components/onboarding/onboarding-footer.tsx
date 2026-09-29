@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, Loader2, AlertCircle, WifiOff } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Loader2,
+  AlertCircle,
+  WifiOff,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AutosaveStatus } from "@/lib/onboarding/onboarding-types";
 
@@ -28,10 +35,10 @@ export function OnboardingFooter({
   onRetryAutosave?: () => void;
 }) {
   return (
-    <footer className="sticky bottom-0 z-20 w-full bg-[var(--background)]/90 backdrop-blur-md border-t border-[var(--border)] py-3 px-4 sm:px-6 transition-colors">
-      <div className="max-w-[960px] mx-auto flex items-center justify-between gap-3">
+    <footer className="onboarding-footer">
+      <div className="onboarding-footer-inner">
         {/* Left: Back / Cancel Button */}
-        <div>
+        <div className="onboarding-footer-back">
           {showBack && onBack ? (
             <Button
               variant="outline"
@@ -52,11 +59,14 @@ export function OnboardingFooter({
         <div
           role="status"
           aria-live="polite"
-          className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--muted-foreground)] select-none"
+          className="onboarding-footer-status flex items-center gap-1.5 text-[11px] font-medium text-[var(--muted-foreground)] select-none"
         >
           {autosaveStatus === "saving" && (
             <span className="inline-flex items-center gap-1.5 text-[var(--muted-foreground)]">
-              <Loader2 size={12} className="animate-spin text-[var(--primary)]" />
+              <Loader2
+                size={12}
+                className="animate-spin text-[var(--primary)]"
+              />
               <span>Saving...</span>
             </span>
           )}
@@ -88,7 +98,7 @@ export function OnboardingFooter({
         </div>
 
         {/* Right: Primary Continue Action */}
-        <div>
+        <div className="onboarding-footer-primary">
           <Button
             variant="default"
             size="sm"
@@ -113,4 +123,3 @@ export function OnboardingFooter({
     </footer>
   );
 }
-

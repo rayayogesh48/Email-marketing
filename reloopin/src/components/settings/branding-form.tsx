@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BrandingSettings } from "@/lib/settings/settings-types";
 import {
   calculateContrast,
@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/dialog";
 import {
+  Palette,
   Upload,
   Trash2,
   AlertTriangle,
@@ -16,6 +17,11 @@ import {
   Sparkles,
   Award,
   Gift,
+  Mail,
+  Smartphone,
+  ExternalLink,
+  Check,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,19 +67,30 @@ export function BrandingForm({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setLogoUrl(branding.logoUrl);
+    setBrandColor(
+      previewState === "branding_low_contrast" ? "#FDE047" : branding.brandColor,
+    );
+    setSenderName(branding.senderName);
+    setLogoError(
+      previewState === "branding_invalid_logo" ? "Upload a PNG, JPG, or WebP image under 2 MB." : null,
+    );
+  }, [branding.storeId, previewState]);
+
   const isDirty =
     logoUrl !== branding.logoUrl ||
     brandColor !== branding.brandColor ||
     senderName !== branding.senderName;
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setLogoUrl(branding.logoUrl);
     setBrandColor(branding.brandColor);
     setSenderName(branding.senderName);
     setLogoError(null);
-  }, [branding]);
+  };
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (isReadOnly) return;
     onUpdateBranding({
       logoUrl,
@@ -81,11 +98,11 @@ export function BrandingForm({
       senderName: senderName.trim() || storeName,
     });
     toast.success("Branding updated");
-  }, [isReadOnly, logoUrl, brandColor, senderName, storeName, onUpdateBranding]);
+  };
 
   useEffect(() => {
     onDirtyChange(isDirty, handleSave, handleCancel);
-  }, [isDirty, handleSave, handleCancel, onDirtyChange]);
+  }, [isDirty, logoUrl, brandColor, senderName]);
 
   // Handle Logo Upload
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -69,6 +69,7 @@ import { IntegrationsModule } from "./integrations/integrations-module";
 import { useIntegrationsStore } from "@/lib/integrations/integrations-store";
 import { SettingsModule } from "./settings/settings-module";
 import { SettingsSection } from "@/lib/settings/settings-types";
+import { CustomersModule } from "./customers/customers-module";
 import Link from "next/link";
 const tabs = [
   "Templates",
@@ -144,6 +145,8 @@ export default function Dashboard({
   settingsSection = "account",
   integrationView = "list",
   integrationId,
+  customerId,
+  isImport,
 }: {
   campaignEditorId?: string;
   automationEditorId?: string;
@@ -153,10 +156,13 @@ export default function Dashboard({
     | "conversation"
     | "analytics"
     | "integrations"
-    | "settings";
+    | "settings"
+    | "customers";
   settingsSection?: SettingsSection;
   integrationView?: "list" | "new" | "detail" | "edit";
   integrationId?: string;
+  customerId?: string;
+  isImport?: boolean;
 }) {
   const flowEditorId = campaignEditorId || automationEditorId;
   const router = useRouter();
@@ -609,7 +615,7 @@ export default function Dashboard({
             { name: "Points", Icon: Coins, href: null },
             { name: "VIP tiers", Icon: Crown, href: "/analytics?tab=vip" },
             { name: "Rewards", Icon: Gift, href: null },
-            { name: "Customers", Icon: Users, href: null },
+            { name: "Customers", Icon: Users, href: "/customers" },
             { name: "Analytics", Icon: BarChart3, href: "/analytics" },
             { name: "Email marketing", Icon: Mail, href: "/" },
             { name: "Conversation", Icon: MessageCircle, href: "/conversation" },
@@ -620,13 +626,15 @@ export default function Dashboard({
             const isAnalyticsNav = name === "Analytics";
             const isConversationNav = name === "Conversation";
             const isSettingsNav = name === "Settings";
+            const isCustomersNav = name === "Customers";
 
             const isActive =
               (isDashboardNav && workspace === "dashboard") ||
               (isEmailNav && workspace === "emails") ||
               (isAnalyticsNav && workspace === "analytics") ||
               (isConversationNav && workspace === "conversation") ||
-              (isSettingsNav && workspace === "settings");
+              (isCustomersNav && workspace === "customers") ||
+              (isSettingsNav && workspace === "settings" && settingsSection !== "billing");
 
             if (href) {
               return (
@@ -670,17 +678,19 @@ export default function Dashboard({
         <nav>
           {[
             { name: "Integrations", Icon: Plug, href: "/integrations" },
-            { name: "Billing", Icon: CreditCard, href: null },
+            { name: "Billing & plans", Icon: CreditCard, href: "/settings/billing" },
             { name: "Team", Icon: Users, href: "/settings?section=team" },
             { name: "Account settings", Icon: SettingsIcon, href: "/settings?section=account" },
           ].map(({ name, Icon, href }) => {
             const isIntegrations = name === "Integrations";
+            const isBilling = name === "Billing & plans" || name === "Billing";
             const isTeam = name === "Team";
             const isAccountSettings = name === "Account settings";
             const isActive =
               (isIntegrations && workspace === "integrations") ||
+              (isBilling && workspace === "settings" && settingsSection === "billing") ||
               (isTeam && workspace === "settings" && settingsSection === "team") ||
-              (isAccountSettings && workspace === "settings" && settingsSection !== "team");
+              (isAccountSettings && workspace === "settings" && settingsSection === "account");
 
             if (href) {
               return (
@@ -791,30 +801,54 @@ export default function Dashboard({
               <Plug size={17} />
             ) : workspace === "analytics" ? (
               <BarChart3 size={17} />
+            ) : workspace === "customers" ? (
+              <Users size={17} />
             ) : workspace === "conversation" ? (
               <MessageCircle size={17} />
             ) : workspace === "dashboard" ? (
               <Home size={17} />
             ) : workspace === "settings" ? (
-              <SettingsIcon size={17} />
+              settingsSection === "billing" ? <CreditCard size={17} /> : <SettingsIcon size={17} />
             ) : (
               <Mail size={17} />
             )}
             <span>Workspace</span>
             <ChevronRight size={13} />
-            <strong>
-              {workspace === "integrations"
-                ? "Integrations"
-                : workspace === "analytics"
-                ? "Analytics"
-                : workspace === "conversation"
-                  ? "Conversation"
-                  : workspace === "dashboard"
-                    ? "Dashboard"
-                    : workspace === "settings"
-                      ? "Settings"
-                      : "Emails"}
-            </strong>
+            {workspace === "customers" ? (
+              isImport ? (
+                <>
+                  <Link href="/customers" className="hover:text-[#5f3ed8] transition-colors">
+                    Customers
+                  </Link>
+                  <ChevronRight size={13} />
+                  <strong>Import customers</strong>
+                </>
+              ) : customerId ? (
+                <>
+                  <Link href="/customers" className="hover:text-[#5f3ed8] transition-colors">
+                    Customers
+                  </Link>
+                  <ChevronRight size={13} />
+                  <strong>Customer profile</strong>
+                </>
+              ) : (
+                <strong>Customers</strong>
+              )
+            ) : (
+              <strong>
+                {workspace === "integrations"
+                  ? "Integrations"
+                  : workspace === "analytics"
+                  ? "Analytics"
+                  : workspace === "conversation"
+                    ? "Conversation"
+                    : workspace === "dashboard"
+                      ? "Dashboard"
+                      : workspace === "settings"
+                        ? (settingsSection === "billing" ? "Billing & plans" : "Settings")
+                        : "Emails"}
+              </strong>
+            )}
           </div>
           <div className="topbar-right">
             <span className="demo-label">Demo workspace</span>
@@ -852,12 +886,17 @@ export default function Dashboard({
           } ${workspace === "analytics" ? "analytics-main" : ""} ${
             workspace === "dashboard" ? "dashboard-main" : ""
           } ${workspace === "integrations" ? "integrations-main" : ""} ${
+            workspace === "customers" ? "customers-main p-0 overflow-visible" : ""
+          } ${
             workspace === "settings" ? "settings-main p-0 overflow-visible" : ""
           }`}
         >
           {workspace === "conversation" && <ConversationPage />}
           {workspace === "analytics" && <AnalyticsModule store={store} />}
           {workspace === "dashboard" && <MerchantDashboard initialStore={store} />}
+          {workspace === "customers" && (
+            <CustomersModule customerId={customerId} isImport={isImport} />
+          )}
           {workspace === "integrations" && (
             <IntegrationsModule
               view={integrationView}

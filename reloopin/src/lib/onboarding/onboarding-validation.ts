@@ -20,6 +20,16 @@ function getLuminance(hex: string): number {
   return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
 }
 
+// Presentation helper; existing color validation and saved values stay unchanged.
+export function getReadableBrandForeground(hex: string): string {
+  if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) return "#FFFFFF";
+  const luminance = getLuminance(hex);
+  if (1.05 / (luminance + 0.05) >= 4.5) return "#FFFFFF";
+  return (luminance + 0.05) / (getLuminance("#09090B") + 0.05) >= 4.5
+    ? "#09090B"
+    : "#000000";
+}
+
 export function validateHexColor(hex: string): {
   valid: boolean;
   accessible: boolean;
@@ -120,17 +130,19 @@ export function validateTiers(tiers: VIPTier[]): {
     const prev = tiers[i - 1];
     const curr = tiers[i];
     if (curr.minimumPoints <= prev.minimumPoints) {
-      fieldErrors[`${curr.id}-order`] = `${curr.name || "Tier"} must require more points than ${prev.name || "previous tier"}.`;
+      fieldErrors[`${curr.id}-order`] =
+        `${curr.name || "Tier"} must require more points than ${prev.name || "previous tier"}.`;
     }
   }
 
-  const hasErrors =
-    Object.keys(fieldErrors).length > 0;
+  const hasErrors = Object.keys(fieldErrors).length > 0;
 
   return {
     valid: !hasErrors,
     fieldErrors,
-    generalError: hasErrors ? "Please resolve the tier configuration errors." : undefined,
+    generalError: hasErrors
+      ? "Please resolve the tier configuration errors."
+      : undefined,
   };
 }
 
@@ -144,13 +156,21 @@ export function validateEarningRule(rule: EarningRuleConfig): {
     errors.ruleName = "Rule name is required.";
   }
 
-  if (rule.pointsEarned === undefined || rule.pointsEarned === null || isNaN(rule.pointsEarned)) {
+  if (
+    rule.pointsEarned === undefined ||
+    rule.pointsEarned === null ||
+    isNaN(rule.pointsEarned)
+  ) {
     errors.pointsEarned = "Enter how many points customers earn.";
   } else if (rule.pointsEarned <= 0) {
     errors.pointsEarned = "Points must be greater than 0.";
   }
 
-  if (rule.perOrderSpend === undefined || rule.perOrderSpend === null || isNaN(rule.perOrderSpend)) {
+  if (
+    rule.perOrderSpend === undefined ||
+    rule.perOrderSpend === null ||
+    isNaN(rule.perOrderSpend)
+  ) {
     errors.perOrderSpend = "Enter the order amount required to earn points.";
   } else if (rule.perOrderSpend <= 0) {
     errors.perOrderSpend = "The order amount must be greater than 0.";
@@ -178,4 +198,3 @@ export function validateEarningRule(rule: EarningRuleConfig): {
     errors,
   };
 }
-

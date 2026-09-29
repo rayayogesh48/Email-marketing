@@ -5,6 +5,7 @@ import {
   TeamMember,
   TeamRole,
   MemberStatus,
+  StoreOption,
 } from "@/lib/settings/settings-types";
 import {
   roleCapabilityMatrix,
@@ -20,15 +21,21 @@ import {
   Search,
   MoreHorizontal,
   Shield,
+  ShieldAlert,
   CheckCircle2,
+  Clock,
   AlertCircle,
   Copy,
   Mail,
   Store,
   ChevronRight,
+  ExternalLink,
   Crown,
+  KeyRound,
   Trash2,
   LogOut,
+  AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 

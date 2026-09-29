@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { OnboardingHeader } from "./onboarding-header";
+import { OnboardingHeader, OnboardingNavigation } from "./onboarding-header";
 import { OnboardingFooter } from "./onboarding-footer";
 import { WelcomeScreen } from "./welcome-screen";
 import { ResumeScreen } from "./resume-screen";
@@ -46,14 +46,16 @@ export function OnboardingFlow({
   const searchParams = useSearchParams();
 
   // Load persisted state safely with lazy initializer
-  const [state, setState] = useState<OnboardingState>(() => loadOnboardingState());
+  const [state, setState] = useState<OnboardingState>(() =>
+    loadOnboardingState(),
+  );
   const isClientReady = useSyncExternalStore(
     emptySubscribe,
     () => true,
-    () => false
+    () => false,
   );
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>(() =>
-    typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saved"
+    typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saved",
   );
 
   // Dialog toggles
@@ -99,7 +101,7 @@ export function OnboardingFlow({
       }
       router.push(`/onboarding?${params.toString()}`);
     },
-    [router, searchParams]
+    [router, searchParams],
   );
 
   // Autosave state handler
@@ -117,7 +119,7 @@ export function OnboardingFlow({
         return next;
       });
     },
-    []
+    [],
   );
 
   // Navigate to a specific step
@@ -130,7 +132,10 @@ export function OnboardingFlow({
   };
 
   // Step completion helper
-  const handleCompleteCurrentStep = (step: OnboardingStep, nextStep: OnboardingStep) => {
+  const handleCompleteCurrentStep = (
+    step: OnboardingStep,
+    nextStep: OnboardingStep,
+  ) => {
     updateAndPersist((prev) => ({
       ...prev,
       completedSteps: Array.from(new Set([...prev.completedSteps, step])),
@@ -194,6 +199,20 @@ export function OnboardingFlow({
     router.push("/dashboard?tour=true");
   };
 
+  const previewControls = (
+    <PreviewStates
+      currentStep={currentStep}
+      currentStateParam={stateParam}
+      onSelectState={(step, subState) => {
+        updateAndPersist((p) => ({ ...p, currentStep: step }));
+        updateRoute(step, subState);
+      }}
+      onResetDemo={handleResetDemo}
+      onMarkAllComplete={handleMarkAllComplete}
+      onClearProgress={clearOnboardingState}
+    />
+  );
+
   if (!isClientReady || stateParam === "loading") {
     return (
       <div className="min-h-screen bg-[var(--background)] flex flex-col justify-between p-6">
@@ -205,6 +224,7 @@ export function OnboardingFlow({
             <div className="h-32 bg-[var(--muted)]/40 rounded-xl animate-pulse" />
           </div>
         </div>
+        {isClientReady && previewControls}
       </div>
     );
   }
@@ -232,6 +252,7 @@ export function OnboardingFlow({
             Back to dashboard
           </Button>
         </div>
+        {isClientReady && previewControls}
       </div>
     );
   }
@@ -248,7 +269,8 @@ export function OnboardingFlow({
             Your session has expired
           </h2>
           <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
-            Sign in again to continue setting up your loyalty program. Your local progress has been preserved.
+            Sign in again to continue setting up your loyalty program. Your
+            local progress has been preserved.
           </p>
           <Button
             variant="default"
@@ -259,18 +281,20 @@ export function OnboardingFlow({
             Sign in again
           </Button>
         </div>
+        {isClientReady && previewControls}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] flex flex-col justify-between relative selection:bg-[var(--primary-container)] selection:text-[var(--primary)]">
+    <div className="onboarding-shell min-h-screen bg-[var(--background)] text-[var(--foreground)] flex flex-col relative selection:bg-[var(--primary-container)] selection:text-[var(--primary)]">
       {/* Offline Alert Banner */}
-      {autosaveStatus === "offline" && (
+      {(autosaveStatus === "offline" || stateParam === "offline") && (
         <div className="bg-[var(--warning-bg)] border-b border-[var(--warning)]/30 text-[var(--warning)] py-2 px-4 text-center text-xs font-semibold flex items-center justify-center gap-2">
           <WifiOff size={14} />
           <span>
-            You&apos;re offline. Reconnect before continuing so your changes are not lost.
+            You&apos;re offline. Reconnect before continuing so your changes are
+            not lost.
           </span>
         </div>
       )}
@@ -285,177 +309,198 @@ export function OnboardingFlow({
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full pb-10">
-        {currentStep === "welcome" && (
-          <WelcomeScreen
-            onStartSetup={() => {
-              updateAndPersist((p) => ({ ...p, currentStep: "connect-store" }));
-              updateRoute("connect-store");
-            }}
-          />
-        )}
-
-        {currentStep === "resume" && (
-          <ResumeScreen
+      <main
+        className={`onboarding-main ${["points-rule", "vip-tiers", "branding"].includes(currentStep) ? "has-step-nav" : ""}`}
+      >
+        {["points-rule", "vip-tiers", "branding"].includes(currentStep) && (
+          <OnboardingNavigation
+            currentStep={currentStep}
             completedSteps={state.completedSteps}
-            onContinueSetup={() => {
-              const next = getNextIncompleteStep(state.completedSteps);
-              updateAndPersist((p) => ({ ...p, currentStep: next }));
-              updateRoute(next);
-            }}
-            onStartOver={() => setShowRestartDialog(true)}
+            onStepClick={handleStepChange}
           />
         )}
+        <div className="onboarding-main-column">
+          {currentStep === "welcome" && (
+            <WelcomeScreen
+              onStartSetup={() => {
+                updateAndPersist((p) => ({
+                  ...p,
+                  currentStep: "connect-store",
+                }));
+                updateRoute("connect-store");
+              }}
+            />
+          )}
 
-        {currentStep === "connect-store" && (
-          <ConnectStoreStep
-            data={state.storeConnection}
-            onUpdateConnection={(updated) =>
-              updateAndPersist((p) => ({
-                ...p,
-                storeConnection: { ...p.storeConnection, ...updated },
-              }))
-            }
-            onContinue={() =>
-              handleCompleteCurrentStep("connect-store", "points-rule")
-            }
-            overrideState={stateParam}
-          />
-        )}
+          {currentStep === "resume" && (
+            <ResumeScreen
+              completedSteps={state.completedSteps}
+              onContinueSetup={() => {
+                const next = getNextIncompleteStep(state.completedSteps);
+                updateAndPersist((p) => ({ ...p, currentStep: next }));
+                updateRoute(next);
+              }}
+              onStartOver={() => setShowRestartDialog(true)}
+            />
+          )}
 
-        {currentStep === "points-rule" && (
-          <EarningRuleForm
-            data={state.earningRule}
-            onSaveRule={(updated) =>
-              updateAndPersist((p) => ({
-                ...p,
-                earningRule: updated,
-              }))
-            }
-            onContinue={() =>
-              handleCompleteCurrentStep("points-rule", "vip-tiers")
-            }
-            overrideState={stateParam}
-          />
-        )}
+          {currentStep === "connect-store" && (
+            <ConnectStoreStep
+              key={`${currentStep}:${stateParam || "default"}`}
+              data={state.storeConnection}
+              onUpdateConnection={(updated) =>
+                updateAndPersist((p) => ({
+                  ...p,
+                  storeConnection: { ...p.storeConnection, ...updated },
+                }))
+              }
+              onContinue={() =>
+                handleCompleteCurrentStep("connect-store", "points-rule")
+              }
+              overrideState={stateParam}
+            />
+          )}
 
-        {currentStep === "vip-tiers" && (
-          <VIPTierList
-            tiers={state.vipTiers}
-            onSaveTiers={(updated) =>
-              updateAndPersist((p) => ({
-                ...p,
-                vipTiers: updated,
-              }))
-            }
-            onContinue={() =>
-              handleCompleteCurrentStep("vip-tiers", "branding")
-            }
-            overrideState={stateParam}
-          />
-        )}
+          {currentStep === "points-rule" && (
+            <EarningRuleForm
+              key={`${currentStep}:${stateParam || "default"}`}
+              data={state.earningRule}
+              onSaveRule={(updated) =>
+                updateAndPersist((p) => ({
+                  ...p,
+                  earningRule: updated,
+                }))
+              }
+              onContinue={() =>
+                handleCompleteCurrentStep("points-rule", "vip-tiers")
+              }
+              overrideState={stateParam}
+            />
+          )}
 
-        {currentStep === "branding" && (
-          <WidgetPreview
-            data={state.branding}
-            onSaveBranding={(updated) =>
-              updateAndPersist((p) => ({
-                ...p,
-                branding: updated,
-              }))
-            }
-            onContinue={() =>
-              handleCompleteCurrentStep("branding", "review")
-            }
-            overrideState={stateParam}
-          />
-        )}
+          {currentStep === "vip-tiers" && (
+            <VIPTierList
+              key={`${currentStep}:${stateParam || "default"}`}
+              tiers={state.vipTiers}
+              onSaveTiers={(updated) =>
+                updateAndPersist((p) => ({
+                  ...p,
+                  vipTiers: updated,
+                }))
+              }
+              onContinue={() =>
+                handleCompleteCurrentStep("vip-tiers", "branding")
+              }
+              overrideState={stateParam}
+            />
+          )}
 
-        {currentStep === "review" && (
-          <ReviewSetup
-            state={state}
-            onNavigateToStep={(target) => {
-              updateAndPersist((p) => ({ ...p, currentStep: target }));
-              updateRoute(target);
-            }}
-            onActivateSuccess={handleActivationComplete}
-            onSaveAndExit={() => setShowSaveAndExit(true)}
-            overrideState={stateParam}
-          />
-        )}
+          {currentStep === "branding" && (
+            <WidgetPreview
+              key={`${currentStep}:${stateParam || "default"}`}
+              data={state.branding}
+              onSaveBranding={(updated) =>
+                updateAndPersist((p) => ({
+                  ...p,
+                  branding: updated,
+                }))
+              }
+              onContinue={() => handleCompleteCurrentStep("branding", "review")}
+              overrideState={stateParam}
+            />
+          )}
 
-        {currentStep === "success" && (
-          <SuccessScreen
-            state={state}
-            onGoToDashboard={handleGoToDashboard}
-          />
-        )}
+          {currentStep === "review" && (
+            <ReviewSetup
+              key={`${currentStep}:${stateParam || "default"}`}
+              state={state}
+              onNavigateToStep={(target) => {
+                updateAndPersist((p) => ({ ...p, currentStep: target }));
+                updateRoute(target);
+              }}
+              onActivateSuccess={handleActivationComplete}
+              onSaveAndExit={() => setShowSaveAndExit(true)}
+              overrideState={stateParam}
+            />
+          )}
+
+          {currentStep === "success" && (
+            <SuccessScreen
+              state={state}
+              onGoToDashboard={handleGoToDashboard}
+            />
+          )}
+
+          {/* Step actions and autosave status */}
+          {currentStep !== "welcome" &&
+            currentStep !== "resume" &&
+            currentStep !== "success" && (
+              <OnboardingFooter
+                showBack={currentStep !== "connect-store"}
+                backLabel={currentStep === "connect-store" ? "Cancel" : "Back"}
+                onBack={() => {
+                  const stepOrder: OnboardingStep[] = [
+                    "connect-store",
+                    "points-rule",
+                    "vip-tiers",
+                    "branding",
+                    "review",
+                  ];
+                  const idx = stepOrder.indexOf(currentStep);
+                  if (idx > 0) {
+                    const prev = stepOrder[idx - 1];
+                    updateAndPersist((p) => ({ ...p, currentStep: prev }));
+                    updateRoute(prev);
+                  }
+                }}
+                continueLabel={
+                  currentStep === "connect-store"
+                    ? "Continue to points rule"
+                    : currentStep === "points-rule"
+                      ? "Continue to VIP tiers"
+                      : currentStep === "vip-tiers"
+                        ? "Continue to branding"
+                        : currentStep === "branding"
+                          ? "Finish setup"
+                          : "Activate loyalty program"
+                }
+                onContinue={() => {
+                  if (currentStep === "connect-store") {
+                    handleCompleteCurrentStep("connect-store", "points-rule");
+                  } else if (currentStep === "points-rule") {
+                    handleCompleteCurrentStep("points-rule", "vip-tiers");
+                  } else if (currentStep === "vip-tiers") {
+                    handleCompleteCurrentStep("vip-tiers", "branding");
+                  } else if (currentStep === "branding") {
+                    handleCompleteCurrentStep("branding", "review");
+                  } else if (currentStep === "review") {
+                    handleActivationComplete();
+                  }
+                }}
+                isContinueLoading={stateParam === "saving"}
+                autosaveStatus={
+                  stateParam === "saving"
+                    ? "saving"
+                    : stateParam === "save_failed"
+                      ? "failed"
+                      : stateParam === "offline"
+                        ? "offline"
+                        : stateParam === "saved"
+                          ? "saved"
+                          : autosaveStatus
+                }
+                onRetryAutosave={() => {
+                  setAutosaveStatus("saving");
+                  if (stateParam === "save_failed") updateRoute(currentStep);
+                  setTimeout(() => setAutosaveStatus("saved"), 300);
+                }}
+              />
+            )}
+        </div>
       </main>
 
-      {/* Sticky Bottom Footer */}
-      {currentStep !== "welcome" && currentStep !== "resume" && currentStep !== "success" && (
-        <OnboardingFooter
-          showBack={currentStep !== "connect-store"}
-          backLabel={currentStep === "connect-store" ? "Cancel" : "Back"}
-          onBack={() => {
-            const stepOrder: OnboardingStep[] = [
-              "connect-store",
-              "points-rule",
-              "vip-tiers",
-              "branding",
-              "review",
-            ];
-            const idx = stepOrder.indexOf(currentStep);
-            if (idx > 0) {
-              const prev = stepOrder[idx - 1];
-              updateAndPersist((p) => ({ ...p, currentStep: prev }));
-              updateRoute(prev);
-            }
-          }}
-          continueLabel={
-            currentStep === "connect-store"
-              ? "Continue to earning rule"
-              : currentStep === "points-rule"
-                ? "Continue to VIP tiers"
-                : currentStep === "vip-tiers"
-                  ? "Continue to branding"
-                  : currentStep === "branding"
-                    ? "Review setup"
-                    : "Activate loyalty program"
-          }
-          onContinue={() => {
-            if (currentStep === "connect-store") {
-              handleCompleteCurrentStep("connect-store", "points-rule");
-            } else if (currentStep === "points-rule") {
-              handleCompleteCurrentStep("points-rule", "vip-tiers");
-            } else if (currentStep === "vip-tiers") {
-              handleCompleteCurrentStep("vip-tiers", "branding");
-            } else if (currentStep === "branding") {
-              handleCompleteCurrentStep("branding", "review");
-            } else if (currentStep === "review") {
-              handleActivationComplete();
-            }
-          }}
-          autosaveStatus={autosaveStatus}
-          onRetryAutosave={() => {
-            setAutosaveStatus("saving");
-            setTimeout(() => setAutosaveStatus("saved"), 300);
-          }}
-        />
-      )}
-
       {/* Persistent Floating Bottom-Left Preview States Tool */}
-      <PreviewStates
-        currentStep={currentStep}
-        currentStateParam={stateParam}
-        onSelectState={(step, subState) => {
-          updateAndPersist((p) => ({ ...p, currentStep: step }));
-          updateRoute(step, subState);
-        }}
-        onResetDemo={handleResetDemo}
-        onMarkAllComplete={handleMarkAllComplete}
-        onClearProgress={clearOnboardingState}
-      />
+      {previewControls}
 
       {/* Dialogs */}
       <HelpSheet open={showHelp} onClose={() => setShowHelp(false)} />
@@ -473,14 +518,18 @@ export function OnboardingFlow({
       />
 
       <UnsavedChangesDialog
-        open={showUnsavedDialog}
-        onClose={() => setShowUnsavedDialog(false)}
+        open={showUnsavedDialog || stateParam === "unsaved_changes"}
+        onClose={() => {
+          setShowUnsavedDialog(false);
+          if (stateParam === "unsaved_changes") updateRoute(currentStep);
+        }}
         onConfirmLeave={() => {
           setShowUnsavedDialog(false);
           router.push("/dashboard");
         }}
         onRetrySave={() => {
           setShowUnsavedDialog(false);
+          if (stateParam === "unsaved_changes") updateRoute(currentStep);
           saveOnboardingState(state);
         }}
       />

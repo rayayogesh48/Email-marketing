@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useId } from "react";
-import { Sparkles, ChevronDown, CheckCircle2, AlertTriangle, Calculator } from "lucide-react";
+import Image from "next/image";
+import {
+  Sparkles,
+  ChevronDown,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EarningRuleConfig } from "@/lib/onboarding/onboarding-types";
 import { validateEarningRule } from "@/lib/onboarding/onboarding-validation";
@@ -17,28 +23,52 @@ export function EarningRuleForm({
   onContinue: () => void;
   overrideState?: string;
 }) {
-  const [ruleName, setRuleName] = useState(data.ruleName || "Points for purchases");
+  const [ruleName, setRuleName] = useState(
+    data.ruleName || "Points for purchases",
+  );
   const [pointsEarned, setPointsEarned] = useState<number | string>(
-    data.pointsEarned ?? 1
+    overrideState === "custom_rate"
+      ? 2
+      : overrideState === "validation_error"
+        ? 0
+        : (data.pointsEarned ?? 1),
   );
   const [perOrderSpend, setPerOrderSpend] = useState<number | string>(
-    data.perOrderSpend ?? 1
+    data.perOrderSpend ?? 1,
   );
   const [minimumOrder, setMinimumOrder] = useState<string>(
-    data.minimumOrder !== null && data.minimumOrder !== undefined
-      ? String(data.minimumOrder)
-      : ""
+    overrideState === "minimum_order"
+      ? "25"
+      : data.minimumOrder !== null && data.minimumOrder !== undefined
+        ? String(data.minimumOrder)
+        : "",
   );
   const [maximumPoints, setMaximumPoints] = useState<string>(
-    data.maximumPoints !== null && data.maximumPoints !== undefined
-      ? String(data.maximumPoints)
-      : ""
+    overrideState === "maximum_points"
+      ? "100"
+      : data.maximumPoints !== null && data.maximumPoints !== undefined
+        ? String(data.maximumPoints)
+        : "",
   );
   const [showAdvanced, setShowAdvanced] = useState(
-    overrideState === "minimum_order" || overrideState === "maximum_points"
+    overrideState === "minimum_order" || overrideState === "maximum_points",
   );
-  const [isSaved, setIsSaved] = useState(data.isSaved || false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaved, setIsSaved] = useState(
+    overrideState === "saved" ||
+      (![
+        "custom_rate",
+        "minimum_order",
+        "maximum_points",
+        "validation_error",
+      ].includes(overrideState || "") &&
+        data.isSaved) ||
+      false,
+  );
+  const [errors, setErrors] = useState<Record<string, string>>(
+    overrideState === "validation_error"
+      ? { pointsEarned: "Points must be greater than 0." }
+      : {},
+  );
 
   const ruleNameId = useId();
   const pointsEarnedId = useId();
@@ -53,7 +83,12 @@ export function EarningRuleForm({
   const parsedMax = maximumPoints ? Number(maximumPoints) : null;
 
   let calculatedExamplePoints = 0;
-  if (!isNaN(parsedPoints) && !isNaN(parsedSpend) && parsedSpend > 0 && parsedPoints > 0) {
+  if (
+    !isNaN(parsedPoints) &&
+    !isNaN(parsedSpend) &&
+    parsedSpend > 0 &&
+    parsedPoints > 0
+  ) {
     const raw = Math.floor((50 / parsedSpend) * parsedPoints);
     calculatedExamplePoints = parsedMax ? Math.min(raw, parsedMax) : raw;
   }
@@ -88,26 +123,28 @@ export function EarningRuleForm({
   } for every $${parsedSpend || 1} spent. ${
     parsedMin ? `Minimum order $${parsedMin}.` : "No minimum order."
   } ${
-    parsedMax ? `Maximum ${parsedMax} points limit.` : "No maximum points limit."
+    parsedMax
+      ? `Maximum ${parsedMax} points limit.`
+      : "No maximum points limit."
   }`;
 
   return (
-    <div className="max-w-[680px] mx-auto py-8 sm:py-10 px-4">
+    <div className="onboarding-content-panel onboarding-rule-panel">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--foreground)]">
-          Choose how customers earn points
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+          Set your earning rule
         </h1>
         <p className="text-sm text-[var(--muted-foreground)] mt-1.5 leading-relaxed">
-          Start with a purchase rule. You can create more earning rules later.
+          Choose how many points customers earn when they spend at your store.
         </p>
       </div>
 
       <div className="space-y-6">
         {/* Main Card */}
-        <div className="p-6 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-2xs space-y-5">
+        <div className="onboarding-form-fields space-y-5">
           {/* Rule Name */}
-          <div>
+          <div className="onboarding-rule-name">
             <label
               htmlFor={ruleNameId}
               className="block text-xs font-semibold text-[var(--foreground)] mb-1.5"
@@ -116,6 +153,10 @@ export function EarningRuleForm({
             </label>
             <input
               id={ruleNameId}
+              aria-invalid={!!errors.ruleName}
+              aria-describedby={
+                errors.ruleName ? `${ruleNameId}-error` : undefined
+              }
               type="text"
               value={ruleName}
               onChange={(e) => {
@@ -126,63 +167,64 @@ export function EarningRuleForm({
               className="w-full h-9 px-3 rounded-lg bg-[var(--input)] border border-[var(--border)] text-xs text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
             />
             {errors.ruleName && (
-              <p className="text-xs font-medium text-[var(--destructive)] mt-1 flex items-center gap-1">
+              <p
+                id={`${ruleNameId}-error`}
+                role="alert"
+                className="text-xs font-medium text-[var(--destructive)] mt-1 flex items-center gap-1"
+              >
                 <AlertTriangle size={12} />
                 <span>{errors.ruleName}</span>
               </p>
             )}
           </div>
 
-          {/* Earning Rate Row: Customers earn X points for every $Y spent */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor={pointsEarnedId}
-                className="block text-xs font-semibold text-[var(--foreground)] mb-1.5"
-              >
-                Customers earn
-              </label>
-              <div className="relative flex items-center">
-                <input
-                  id={pointsEarnedId}
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={pointsEarned}
-                  onChange={(e) => {
-                    setPointsEarned(e.target.value);
-                    setIsSaved(false);
-                    if (errors.pointsEarned) setErrors({ ...errors, pointsEarned: "" });
-                  }}
-                  className={`w-full h-9 pl-3 pr-14 rounded-lg bg-[var(--input)] border text-xs text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] tabular-nums ${
-                    errors.pointsEarned ? "border-[var(--destructive)]" : "border-[var(--border)]"
-                  }`}
-                />
-                <span className="absolute right-3 text-xs font-medium text-[var(--muted-foreground)] pointer-events-none">
-                  {Number(pointsEarned) === 1 ? "point" : "points"}
-                </span>
-              </div>
+          {/* Editable sentence; original earning fields and save validation are preserved. */}
+          <div className="onboarding-rule-builder">
+            <div className="rule-points">
+              <input
+                id={pointsEarnedId}
+                aria-label="Customers earn"
+                aria-invalid={!!errors.pointsEarned}
+                aria-describedby={
+                  errors.pointsEarned ? `${pointsEarnedId}-error` : undefined
+                }
+                type="number"
+                min="1"
+                step="1"
+                value={pointsEarned}
+                onChange={(e) => {
+                  setPointsEarned(e.target.value);
+                  setIsSaved(false);
+                  if (errors.pointsEarned)
+                    setErrors({ ...errors, pointsEarned: "" });
+                }}
+              />
+              <span>{Number(pointsEarned) === 1 ? "point" : "points"}</span>
               {errors.pointsEarned && (
-                <p className="text-xs font-medium text-[var(--destructive)] mt-1 flex items-center gap-1">
-                  <AlertTriangle size={12} />
-                  <span>{errors.pointsEarned}</span>
+                <p
+                  id={`${pointsEarnedId}-error`}
+                  role="alert"
+                  className="rule-error"
+                >
+                  {errors.pointsEarned}
                 </p>
               )}
             </div>
-
-            <div>
-              <label
-                htmlFor={perOrderSpendId}
-                className="block text-xs font-semibold text-[var(--foreground)] mb-1.5"
-              >
-                For every
-              </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3 text-xs font-medium text-[var(--muted-foreground)] pointer-events-none">
+            <div className="rule-spend">
+              <span>Every</span>
+              <div className="rule-input">
+                <span className="currency-symbol" aria-hidden="true">
                   $
                 </span>
                 <input
                   id={perOrderSpendId}
+                  aria-label="For every"
+                  aria-invalid={!!errors.perOrderSpend}
+                  aria-describedby={
+                    errors.perOrderSpend
+                      ? `${perOrderSpendId}-error`
+                      : undefined
+                  }
                   type="number"
                   min="0.01"
                   step="0.5"
@@ -190,49 +232,35 @@ export function EarningRuleForm({
                   onChange={(e) => {
                     setPerOrderSpend(e.target.value);
                     setIsSaved(false);
-                    if (errors.perOrderSpend) setErrors({ ...errors, perOrderSpend: "" });
+                    if (errors.perOrderSpend)
+                      setErrors({ ...errors, perOrderSpend: "" });
                   }}
-                  className={`w-full h-9 pl-6 pr-14 rounded-lg bg-[var(--input)] border text-xs text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] tabular-nums ${
-                    errors.perOrderSpend ? "border-[var(--destructive)]" : "border-[var(--border)]"
-                  }`}
                 />
-                <span className="absolute right-3 text-xs font-medium text-[var(--muted-foreground)] pointer-events-none">
-                  spent
-                </span>
               </div>
+              <span className="text-[var(--muted-foreground)]">
+                spent earns
+              </span>
               {errors.perOrderSpend && (
-                <p className="text-xs font-medium text-[var(--destructive)] mt-1 flex items-center gap-1">
-                  <AlertTriangle size={12} />
-                  <span>{errors.perOrderSpend}</span>
+                <p
+                  id={`${perOrderSpendId}-error`}
+                  role="alert"
+                  className="rule-error"
+                >
+                  {errors.perOrderSpend}
                 </p>
               )}
             </div>
           </div>
-
-          {/* Live Example Card */}
-          <div className="p-4 rounded-xl bg-[var(--primary-container)]/25 border border-[var(--primary)]/25 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] flex items-center justify-center shrink-0">
-              <Calculator size={16} />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--primary)]">
-                Live calculation preview
-              </span>
-              <p className="text-xs font-medium text-[var(--foreground)] mt-0.5">
-                A $50 order earns your customer{" "}
-                <strong className="text-[var(--primary)] text-sm font-bold tabular-nums">
-                  {calculatedExamplePoints} points
-                </strong>
-                .
-              </p>
-              <p className="text-[11px] text-[var(--muted-foreground)] mt-0.5">
-                Calculated in real time based on your selected earn rate.
-              </p>
-            </div>
+          <div className="onboarding-rule-example" aria-live="polite">
+            <Image src="/onboarding/info.svg" width={16} height={16} alt="" />
+            <p>
+              <strong>Example:</strong> A $50 order will reward your customer
+              with <strong>{calculatedExamplePoints} points</strong>.
+            </p>
           </div>
 
           {/* Collapsible Advanced Options */}
-          <div className="pt-2 border-t border-[var(--border)]">
+          <div className="onboarding-rule-options pt-2 border-t border-[var(--border)]">
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -272,10 +300,14 @@ export function EarningRuleForm({
                     />
                   </div>
                   <p className="text-[11px] text-[var(--muted-foreground)] mt-1">
-                    Customers only earn points when the order reaches this amount.
+                    Customers only earn points when the order reaches this
+                    amount.
                   </p>
                   {errors.minimumOrder && (
-                    <p className="text-xs text-[var(--destructive)] mt-1">
+                    <p
+                      role="alert"
+                      className="text-xs text-[var(--destructive)] mt-1"
+                    >
                       {errors.minimumOrder}
                     </p>
                   )}
@@ -304,7 +336,10 @@ export function EarningRuleForm({
                     Limit how many points a customer can earn from one order.
                   </p>
                   {errors.maximumPoints && (
-                    <p className="text-xs text-[var(--destructive)] mt-1">
+                    <p
+                      role="alert"
+                      className="text-xs text-[var(--destructive)] mt-1"
+                    >
                       {errors.maximumPoints}
                     </p>
                   )}
@@ -315,9 +350,12 @@ export function EarningRuleForm({
         </div>
 
         {/* Rule Summary Banner */}
-        <div className="p-4 rounded-xl bg-[var(--muted)]/40 border border-[var(--border)] flex items-start justify-between gap-4">
+        <div className="onboarding-rule-summary bg-[var(--muted)] border border-[var(--border)] flex items-start justify-between gap-4">
           <div className="flex items-start gap-2.5">
-            <Sparkles size={16} className="text-[var(--secondary)] shrink-0 mt-0.5" />
+            <Sparkles
+              size={16}
+              className="text-[var(--secondary)] shrink-0 mt-0.5"
+            />
             <div>
               <h4 className="text-xs font-semibold text-[var(--foreground)]">
                 Active earning rule summary
@@ -343,6 +381,7 @@ export function EarningRuleForm({
               variant="default"
               size="sm"
               onClick={handleSave}
+              disabled={overrideState === "saving"}
               className="text-xs h-9 px-4 font-semibold"
             >
               Save earning rule
@@ -362,4 +401,3 @@ export function EarningRuleForm({
     </div>
   );
 }
-

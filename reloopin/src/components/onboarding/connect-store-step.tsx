@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -37,18 +38,50 @@ export function ConnectStoreStep({
   overrideState?: string;
 }) {
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId>(
-    data.platform || "woocommerce"
+    data.platform || "woocommerce",
   );
-  const [storeUrl, setStoreUrl] = useState(data.storeUrl || "https://northstargoods.com");
+  const [storeUrl, setStoreUrl] = useState(
+    data.storeUrl || "https://northstargoods.com",
+  );
   const [urlError, setUrlError] = useState<string | null>(null);
-  const [showManualConnect, setShowManualConnect] = useState(false);
+  const [showManualConnect, setShowManualConnect] = useState(
+    overrideState === "connection_form" ||
+      overrideState === "invalid_credentials",
+  );
   const [consumerKey, setConsumerKey] = useState("");
   const [consumerSecret, setConsumerSecret] = useState("");
   const [showSyncDetailsModal, setShowSyncDetailsModal] = useState(false);
 
-  // Active connection sub-state (can be overridden by preview switcher)
+  // Preview values are temporary; saved merchant connection data stays intact.
+  const [previewState, setPreviewState] = useState(overrideState);
+  const connectionPreviewStates = [
+    "select_platform",
+    "connecting",
+    "redirecting",
+    "waiting_approval",
+    "verifying",
+    "connected",
+    "syncing",
+    "sync_complete",
+    "permission_denied",
+    "invalid_url",
+    "already_connected",
+    "connection_expired",
+    "connection_failed",
+    "partial_sync",
+  ];
   const connectionState: StoreConnectionState =
-    (overrideState as StoreConnectionState) || data.connectionState || "select_platform";
+    previewState && connectionPreviewStates.includes(previewState)
+      ? (previewState as StoreConnectionState)
+      : previewState === "platform_selected" ||
+          previewState === "connection_form" ||
+          previewState === "invalid_credentials"
+        ? "select_platform"
+        : data.connectionState || "select_platform";
+  const updateConnection = (updated: Partial<StoreConnectionData>) => {
+    setPreviewState(undefined);
+    onUpdateConnection(updated);
+  };
 
   // URL validation
   const validateUrl = (url: string) => {
@@ -68,7 +101,7 @@ export function ConnectStoreStep({
   // State transition simulations
   const handleInitiateConnection = () => {
     if (!validateUrl(storeUrl)) return;
-    onUpdateConnection({
+    updateConnection({
       platform: selectedPlatform,
       storeUrl,
       connectionState: "connecting",
@@ -76,16 +109,16 @@ export function ConnectStoreStep({
 
     // Simulate transition to waiting for approval
     setTimeout(() => {
-      onUpdateConnection({ connectionState: "waiting_approval" });
+      updateConnection({ connectionState: "waiting_approval" });
     }, 1200);
   };
 
   const handleApproveAccess = () => {
-    onUpdateConnection({ connectionState: "verifying" });
+    updateConnection({ connectionState: "verifying" });
 
     // Simulate verification -> connected -> syncing -> sync complete
     setTimeout(() => {
-      onUpdateConnection({
+      updateConnection({
         connectionState: "connected",
         connectedAt: "Just now",
         storeName: "Northstar Goods",
@@ -94,7 +127,7 @@ export function ConnectStoreStep({
   };
 
   const handleStartSync = () => {
-    onUpdateConnection({
+    updateConnection({
       connectionState: "syncing",
       syncProgress: DEFAULT_SYNC_ITEMS.map((item) => ({
         ...item,
@@ -103,7 +136,7 @@ export function ConnectStoreStep({
     });
 
     setTimeout(() => {
-      onUpdateConnection({
+      updateConnection({
         connectionState: "sync_complete",
         syncProgress: DEFAULT_SYNC_ITEMS,
       });
@@ -111,89 +144,87 @@ export function ConnectStoreStep({
   };
 
   const handleCancelConnection = () => {
-    onUpdateConnection({ connectionState: "select_platform" });
+    updateConnection({ connectionState: "select_platform" });
   };
 
   const currentPlatformObj = DEFAULT_PLATFORMS.find(
-    (p) => p.id === selectedPlatform
+    (p) => p.id === selectedPlatform,
   );
 
   return (
-    <div className="max-w-[760px] mx-auto py-8 sm:py-10 px-4">
+    <div className="onboarding-connect-panel">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--foreground)]">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
           Connect your store
         </h1>
         <p className="text-sm text-[var(--muted-foreground)] mt-1.5 leading-relaxed">
-          Connect your store so Reloopin can sync customers, orders, and loyalty activity.
+          Choose your ecommerce platform to get started.
         </p>
       </div>
 
       {/* 1. SELECT PLATFORM & STORE URL FORM */}
       {connectionState === "select_platform" && (
         <div className="space-y-6">
-          <div className="space-y-3">
-            <label className="text-xs font-semibold text-[var(--foreground)]">
-              Choose your ecommerce platform
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {DEFAULT_PLATFORMS.map((platform) => {
-                const isSelected = selectedPlatform === platform.id;
-                const isAvailable = platform.availability === "available";
-
-                return (
-                  <div
-                    key={platform.id}
-                    onClick={() => (isAvailable ? setSelectedPlatform(platform.id) : null)}
-                    className={`p-4 rounded-xl border text-left transition-all relative ${
-                      isSelected
-                        ? "bg-[var(--card)] border-[var(--primary)] shadow-xs ring-1 ring-[var(--primary)]"
-                        : isAvailable
-                          ? "bg-[var(--card)] border-[var(--border)] hover:border-[var(--ring)] cursor-pointer"
-                          : "bg-[var(--muted)]/40 border-[var(--border)] opacity-60 cursor-not-allowed"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                            isSelected
-                              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                              : "bg-[var(--muted)] text-[var(--muted-foreground)]"
-                          }`}
-                        >
-                          {platform.id === "woocommerce" ? "WC" : platform.id === "shopify" ? "SH" : "EC"}
-                        </div>
-                        <span className="text-xs font-bold text-[var(--foreground)]">
-                          {platform.name}
-                        </span>
-                      </div>
-
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          isAvailable
-                            ? isSelected
-                              ? "bg-[var(--primary-container)] text-[var(--primary)]"
-                              : "bg-[var(--muted)] text-[var(--muted-foreground)]"
-                            : "bg-[var(--border)] text-[var(--muted-foreground)]"
-                        }`}
-                      >
+          <div
+            className="onboarding-platforms"
+            role="group"
+            aria-label="Choose your ecommerce platform"
+          >
+            {DEFAULT_PLATFORMS.map((platform) => {
+              const isSelected = selectedPlatform === platform.id;
+              const isAvailable = platform.availability === "available";
+              return (
+                <div
+                  key={platform.id}
+                  className={`onboarding-platform ${isSelected ? "is-selected" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
+                >
+                  <div className={`onboarding-platform-icon ${platform.id}`}>
+                    <Image
+                      src={`/onboarding/${platform.id === "woocommerce" ? "shopping-cart" : platform.id === "shopify" ? "shopping-bag" : "globe"}.svg`}
+                      width={24}
+                      height={24}
+                      alt=""
+                    />
+                  </div>
+                  <div className="onboarding-platform-meta">
+                    {!isAvailable && (
+                      <span className="onboarding-platform-badge">
                         {platform.badge}
                       </span>
-                    </div>
-
-                    <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed">
-                      {platform.description}
+                    )}
+                    <h2>{platform.name}</h2>
+                    <p>
+                      {platform.id === "woocommerce"
+                        ? "Instant sync via REST API"
+                        : platform.id === "shopify"
+                          ? "Connect with the Reloopin app"
+                          : platform.description}
                     </p>
                   </div>
-                );
-              })}
-            </div>
+                  <Button
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    disabled={!isAvailable}
+                    aria-pressed={isSelected}
+                    onClick={() => {
+                      setSelectedPlatform(platform.id);
+                      document.getElementById("store-url")?.focus();
+                    }}
+                  >
+                    {isAvailable
+                      ? isSelected
+                        ? "Selected"
+                        : "Select platform"
+                      : "Connect"}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
 
           {/* Store URL Input */}
-          <div className="p-5 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-2xs space-y-4">
+          <div className="onboarding-connection-form bg-[var(--card)] border border-[var(--border)] shadow-2xs space-y-4">
             <div>
               <label
                 htmlFor="store-url"
@@ -204,6 +235,8 @@ export function ConnectStoreStep({
               <div className="relative">
                 <input
                   id="store-url"
+                  aria-invalid={!!urlError}
+                  aria-describedby={urlError ? "store-url-error" : undefined}
                   type="url"
                   value={storeUrl}
                   onChange={(e) => {
@@ -212,7 +245,9 @@ export function ConnectStoreStep({
                   }}
                   placeholder="https://northstargoods.com"
                   className={`w-full h-10 px-3 rounded-lg bg-[var(--input)] border text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] transition-all ${
-                    urlError ? "border-[var(--destructive)]" : "border-[var(--border)]"
+                    urlError
+                      ? "border-[var(--destructive)]"
+                      : "border-[var(--border)]"
                   }`}
                 />
               </div>
@@ -220,7 +255,11 @@ export function ConnectStoreStep({
                 Enter the website address customers use to visit your store.
               </p>
               {urlError && (
-                <p className="text-xs font-medium text-[var(--destructive)] mt-1.5 flex items-center gap-1.5">
+                <p
+                  id="store-url-error"
+                  role="alert"
+                  className="text-xs font-medium text-[var(--destructive)] mt-1.5 flex items-center gap-1.5"
+                >
                   <AlertTriangle size={13} />
                   <span>{urlError}</span>
                 </p>
@@ -252,12 +291,23 @@ export function ConnectStoreStep({
             </div>
 
             {/* Collapsed Manual Credentials */}
+            {previewState === "invalid_credentials" && (
+              <p role="alert" className="text-xs text-[var(--destructive)]">
+                Invalid credentials. Check your consumer key and secret, then
+                try again.
+              </p>
+            )}
             {showManualConnect && (
               <div className="pt-4 border-t border-[var(--border)] space-y-3">
                 <div className="p-3 rounded-lg bg-[var(--muted)]/50 text-[11px] text-[var(--muted-foreground)] flex items-start gap-2">
-                  <KeyRound size={14} className="shrink-0 mt-0.5 text-[var(--primary)]" />
+                  <KeyRound
+                    size={14}
+                    className="shrink-0 mt-0.5 text-[var(--primary)]"
+                  />
                   <span>
-                    If your store blocks automated OAuth redirects, enter your platform API Consumer Key and Consumer Secret with Read/Write permissions.
+                    If your store blocks automated OAuth redirects, enter your
+                    platform API Consumer Key and Consumer Secret with
+                    Read/Write permissions.
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -267,6 +317,7 @@ export function ConnectStoreStep({
                     </label>
                     <input
                       type="text"
+                      aria-label="Consumer key"
                       value={consumerKey}
                       onChange={(e) => setConsumerKey(e.target.value)}
                       placeholder="ck_..."
@@ -279,6 +330,7 @@ export function ConnectStoreStep({
                     </label>
                     <input
                       type="password"
+                      aria-label="Consumer secret"
                       value={consumerSecret}
                       onChange={(e) => setConsumerSecret(e.target.value)}
                       placeholder="cs_..."
@@ -293,7 +345,8 @@ export function ConnectStoreStep({
       )}
 
       {/* 2. CONNECTING / REDIRECTING STATE */}
-      {(connectionState === "connecting" || connectionState === "redirecting") && (
+      {(connectionState === "connecting" ||
+        connectionState === "redirecting") && (
         <div className="p-8 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs text-center max-w-md mx-auto space-y-4">
           <div className="w-12 h-12 rounded-xl bg-[var(--primary-container)] text-[var(--primary)] flex items-center justify-center mx-auto">
             <Loader2 size={24} className="animate-spin" />
@@ -304,7 +357,7 @@ export function ConnectStoreStep({
               Connecting your store
             </h3>
             <p className="text-xs text-[var(--muted-foreground)] mt-1 max-w-xs mx-auto leading-relaxed">
-              We&apos;re opening {currentPlatformObj?.name || "WooCommerce"} so you can approve the connection.
+              We’re checking your credentials and preparing your store data.
             </p>
           </div>
 
@@ -332,10 +385,12 @@ export function ConnectStoreStep({
 
           <div>
             <h3 className="text-base font-bold text-[var(--foreground)]">
-              Approve the connection in {currentPlatformObj?.name || "WooCommerce"}
+              Approve the connection in{" "}
+              {currentPlatformObj?.name || "WooCommerce"}
             </h3>
             <p className="text-xs text-[var(--muted-foreground)] mt-1.5 max-w-xs mx-auto leading-relaxed">
-              After approving access in the external store window, return here to finish connecting your store.
+              After approving access in the external store window, return here
+              to finish connecting your store.
             </p>
           </div>
 
@@ -373,7 +428,8 @@ export function ConnectStoreStep({
               Verifying your connection
             </h3>
             <p className="text-xs text-[var(--muted-foreground)] mt-1.5 max-w-xs mx-auto leading-relaxed">
-              We&apos;re checking that Reloopin can access the customer and order data needed for your loyalty program.
+              We&apos;re checking that Reloopin can access the customer and
+              order data needed for your loyalty program.
             </p>
           </div>
 
@@ -397,10 +453,12 @@ export function ConnectStoreStep({
                     <span>Connected</span>
                   </div>
                   <h3 className="text-base font-bold text-[var(--foreground)]">
-                    {data.storeName || "Northstar Goods"} is connected successfully
+                    {data.storeName || "Northstar Goods"} is connected
+                    successfully
                   </h3>
                   <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                    {storeUrl} · WooCommerce · Connected {data.connectedAt || "just now"}
+                    {storeUrl} · WooCommerce · Connected{" "}
+                    {data.connectedAt || "just now"}
                   </p>
                 </div>
               </div>
@@ -425,7 +483,9 @@ export function ConnectStoreStep({
                 Existing customers will be added automatically
               </h4>
               <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
-                Existing customers will start with 0 points. They will earn points from eligible activity after the loyalty program is activated.
+                Existing customers will start with 0 points. They will earn
+                points from eligible activity after the loyalty program is
+                activated.
               </p>
               <p className="text-[11px] text-[var(--muted-foreground)] opacity-80">
                 Past orders will not automatically generate points.
@@ -436,7 +496,8 @@ export function ConnectStoreStep({
       )}
 
       {/* 6. SYNCING PROGRESS & COMPLETE STATE */}
-      {(connectionState === "syncing" || connectionState === "sync_complete") && (
+      {(connectionState === "syncing" ||
+        connectionState === "sync_complete") && (
         <div className="space-y-6">
           <div className="p-6 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xs space-y-5">
             <div className="flex items-center justify-between">
@@ -482,13 +543,21 @@ export function ConnectStoreStep({
                         {item.label}
                       </span>
                       <div className="text-base font-bold text-[var(--foreground)] tabular-nums">
-                        {isComplete ? item.count.toLocaleString() : "Syncing..."}
+                        {isComplete
+                          ? item.count.toLocaleString()
+                          : "Syncing..."}
                       </div>
                     </div>
                     {isComplete ? (
-                      <CheckCircle2 size={16} className="text-[var(--secondary)]" />
+                      <CheckCircle2
+                        size={16}
+                        className="text-[var(--secondary)]"
+                      />
                     ) : (
-                      <Loader2 size={16} className="animate-spin text-[var(--primary)]" />
+                      <Loader2
+                        size={16}
+                        className="animate-spin text-[var(--primary)]"
+                      />
                     )}
                   </div>
                 );
@@ -512,7 +581,7 @@ export function ConnectStoreStep({
                   onClick={onContinue}
                   className="text-xs h-9 px-4 font-semibold"
                 >
-                  Continue to earning rule
+                  Continue to points rule
                 </Button>
               ) : (
                 <Button
@@ -536,7 +605,9 @@ export function ConnectStoreStep({
                 Existing customers will be added automatically
               </h4>
               <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
-                Existing customers will start with 0 points. They will earn points from eligible activity after the loyalty program is activated.
+                Existing customers will start with 0 points. They will earn
+                points from eligible activity after the loyalty program is
+                activated.
               </p>
               <p className="text-[11px] text-[var(--muted-foreground)] opacity-80">
                 Past orders will not automatically generate points.
@@ -551,7 +622,10 @@ export function ConnectStoreStep({
       {connectionState === "invalid_url" && (
         <div className="p-6 rounded-xl bg-[var(--destructive-container)]/20 border border-[var(--destructive)]/40 space-y-3">
           <div className="flex items-start gap-3">
-            <XCircle size={20} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+            <XCircle
+              size={20}
+              className="text-[var(--destructive)] shrink-0 mt-0.5"
+            />
             <div>
               <h3 className="text-sm font-bold text-[var(--destructive)]">
                 Enter a valid store URL
@@ -576,13 +650,17 @@ export function ConnectStoreStep({
       {connectionState === "permission_denied" && (
         <div className="p-6 rounded-xl bg-[var(--destructive-container)]/20 border border-[var(--destructive)]/40 space-y-3">
           <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+            <AlertTriangle
+              size={20}
+              className="text-[var(--destructive)] shrink-0 mt-0.5"
+            />
             <div>
               <h3 className="text-sm font-bold text-[var(--destructive)]">
                 Permission was not approved
               </h3>
               <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                Reloopin needs access to customer and order data to run your loyalty program.
+                Reloopin needs access to customer and order data to run your
+                loyalty program.
               </p>
             </div>
           </div>
@@ -611,7 +689,10 @@ export function ConnectStoreStep({
       {connectionState === "connection_expired" && (
         <div className="p-6 rounded-xl bg-[var(--destructive-container)]/20 border border-[var(--destructive)]/40 space-y-3">
           <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+            <AlertTriangle
+              size={20}
+              className="text-[var(--destructive)] shrink-0 mt-0.5"
+            />
             <div>
               <h3 className="text-sm font-bold text-[var(--destructive)]">
                 Connection request expired
@@ -636,7 +717,10 @@ export function ConnectStoreStep({
       {connectionState === "already_connected" && (
         <div className="p-6 rounded-xl bg-[var(--warning-container)]/30 border border-[var(--warning)]/50 space-y-3">
           <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-[var(--warning)] shrink-0 mt-0.5" />
+            <AlertTriangle
+              size={20}
+              className="text-[var(--warning)] shrink-0 mt-0.5"
+            />
             <div>
               <h3 className="text-sm font-bold text-[var(--foreground)]">
                 This store is already connected
@@ -656,13 +740,17 @@ export function ConnectStoreStep({
       {connectionState === "partial_sync" && (
         <div className="p-6 rounded-xl bg-[var(--warning-container)]/30 border border-[var(--warning)]/50 space-y-3">
           <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-[var(--warning)] shrink-0 mt-0.5" />
+            <AlertTriangle
+              size={20}
+              className="text-[var(--warning)] shrink-0 mt-0.5"
+            />
             <div>
               <h3 className="text-sm font-bold text-[var(--foreground)]">
                 Some store data could not be synced
               </h3>
               <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                Customers and orders are ready, but product data is still unavailable.
+                Customers and orders are ready, but product data is still
+                unavailable.
               </p>
             </div>
           </div>
@@ -691,13 +779,17 @@ export function ConnectStoreStep({
       {connectionState === "connection_failed" && (
         <div className="p-6 rounded-xl bg-[var(--destructive-container)]/20 border border-[var(--destructive)]/40 space-y-3">
           <div className="flex items-start gap-3">
-            <XCircle size={20} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+            <XCircle
+              size={20}
+              className="text-[var(--destructive)] shrink-0 mt-0.5"
+            />
             <div>
               <h3 className="text-sm font-bold text-[var(--destructive)]">
-                Store connection failed
+                We couldn’t connect your store
               </h3>
               <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                We couldn&apos;t connect Northstar Goods. Check the store URL and try again.
+                We couldn&apos;t connect Northstar Goods. Check the store URL
+                and try again.
               </p>
             </div>
           </div>
@@ -719,7 +811,7 @@ export function ConnectStoreStep({
               }}
               className="text-xs h-8 px-3"
             >
-              Connect manually
+              Edit connection details
             </Button>
           </div>
         </div>
@@ -735,21 +827,36 @@ export function ConnectStoreStep({
         <div className="space-y-4 mt-3">
           <div className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-lg">
             <div className="p-3 flex items-center justify-between text-xs">
-              <span className="font-medium text-[var(--muted-foreground)]">Customers</span>
-              <span className="font-bold text-[var(--foreground)]">2,486 records synced</span>
+              <span className="font-medium text-[var(--muted-foreground)]">
+                Customers
+              </span>
+              <span className="font-bold text-[var(--foreground)]">
+                2,486 records synced
+              </span>
             </div>
             <div className="p-3 flex items-center justify-between text-xs">
-              <span className="font-medium text-[var(--muted-foreground)]">Historical Orders</span>
-              <span className="font-bold text-[var(--foreground)]">8,420 orders synced</span>
+              <span className="font-medium text-[var(--muted-foreground)]">
+                Historical Orders
+              </span>
+              <span className="font-bold text-[var(--foreground)]">
+                8,420 orders synced
+              </span>
             </div>
             <div className="p-3 flex items-center justify-between text-xs">
-              <span className="font-medium text-[var(--muted-foreground)]">Products Catalog</span>
-              <span className="font-bold text-[var(--foreground)]">684 items mapped</span>
+              <span className="font-medium text-[var(--muted-foreground)]">
+                Products Catalog
+              </span>
+              <span className="font-bold text-[var(--foreground)]">
+                684 items mapped
+              </span>
             </div>
             <div className="p-3 flex items-center justify-between text-xs">
-              <span className="font-medium text-[var(--muted-foreground)]">Webhooks Status</span>
+              <span className="font-medium text-[var(--muted-foreground)]">
+                Webhooks Status
+              </span>
               <span className="text-[var(--secondary)] font-semibold flex items-center gap-1">
-                <CheckCircle2 size={12} /> Active (order.created, customer.created)
+                <CheckCircle2 size={12} /> Active (order.created,
+                customer.created)
               </span>
             </div>
           </div>

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/dialog";
@@ -35,16 +36,32 @@ export function VIPTierList({
   onContinue: () => void;
   overrideState?: string;
 }) {
-  const [tierList, setTierList] = useState<VIPTier[]>(tiers);
-  const [editingTier, setEditingTier] = useState<VIPTier | null>(null);
-  const [showAddModal, setShowAddModal] = useState(overrideState === "add_tier");
-  const [tierPendingRemoval, setTierPendingRemoval] = useState<VIPTier | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
+  const [tierList, setTierList] = useState<VIPTier[]>(
+    overrideState === "invalid_thresholds"
+      ? tiers.map((tier, index) =>
+          index === 1 ? { ...tier, minimumPoints: 0 } : tier,
+        )
+      : tiers,
+  );
+  const [editingTier, setEditingTier] = useState<VIPTier | null>(
+    overrideState === "editing_tier" ? tiers[0] : null,
+  );
+  const [showAddModal, setShowAddModal] = useState(
+    overrideState === "add_tier",
+  );
+  const [tierPendingRemoval, setTierPendingRemoval] = useState<VIPTier | null>(
+    null,
+  );
+  const [isSaved, setIsSaved] = useState(overrideState === "saved");
   const [validationResult, setValidationResult] = useState<{
     valid: boolean;
     fieldErrors: Record<string, string>;
     generalError?: string;
-  }>({ valid: true, fieldErrors: {} });
+  }>(
+    overrideState === "invalid_thresholds"
+      ? validateTiers(tierList)
+      : { valid: true, fieldErrors: {} },
+  );
 
   // Add tier form state
   const [newTierName, setNewTierName] = useState("");
@@ -55,7 +72,9 @@ export function VIPTierList({
   // Validate and auto-sort tiers
   const handleTiersChange = (newList: VIPTier[]) => {
     // Sort by minimum points ascending
-    const sorted = [...newList].sort((a, b) => a.minimumPoints - b.minimumPoints);
+    const sorted = [...newList].sort(
+      (a, b) => a.minimumPoints - b.minimumPoints,
+    );
     setTierList(sorted);
     setIsSaved(false);
 
@@ -90,7 +109,7 @@ export function VIPTierList({
 
     if (
       tierList.some(
-        (t) => t.name.toLowerCase().trim() === newTierName.toLowerCase().trim()
+        (t) => t.name.toLowerCase().trim() === newTierName.toLowerCase().trim(),
       )
     ) {
       setModalError("A tier with this name already exists.");
@@ -125,7 +144,9 @@ export function VIPTierList({
       return;
     }
 
-    const updated = tierList.map((t) => (t.id === editingTier.id ? editingTier : t));
+    const updated = tierList.map((t) =>
+      t.id === editingTier.id ? editingTier : t,
+    );
     handleTiersChange(updated);
     setEditingTier(null);
   };
@@ -139,15 +160,16 @@ export function VIPTierList({
   };
 
   return (
-    <div className="max-w-[720px] mx-auto py-8 sm:py-10 px-4">
+    <div className="onboarding-content-panel onboarding-tiers-panel">
       {/* Header */}
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--foreground)]">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
             Set up your VIP tiers
           </h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-1.5 leading-relaxed">
-            Create milestones that give loyal customers better benefits.
+            Reward your best customers with better benefits as they earn more
+            points.
           </p>
         </div>
 
@@ -166,15 +188,18 @@ export function VIPTierList({
         {/* Tier Cards List */}
         <div className="space-y-3">
           {tierList.map((tier, idx) => {
-            const hasOrderError = validationResult.fieldErrors[`${tier.id}-order`];
-            const hasPointsError = validationResult.fieldErrors[`${tier.id}-points`];
-            const hasNameError = validationResult.fieldErrors[`${tier.id}-name`];
+            const hasOrderError =
+              validationResult.fieldErrors[`${tier.id}-order`];
+            const hasPointsError =
+              validationResult.fieldErrors[`${tier.id}-points`];
+            const hasNameError =
+              validationResult.fieldErrors[`${tier.id}-name`];
             const isFirst = idx === 0;
 
             return (
               <div
                 key={tier.id}
-                className={`p-4 rounded-xl border bg-[var(--card)] shadow-2xs transition-all ${
+                className={`tier-card p-4 rounded-xl border bg-[var(--card)] shadow-2xs transition-all ${
                   hasOrderError || hasPointsError || hasNameError
                     ? "border-[var(--destructive)] ring-1 ring-[var(--destructive)]"
                     : "border-[var(--border)] hover:border-[var(--ring)]"
@@ -184,9 +209,14 @@ export function VIPTierList({
                   {/* Left: Color dot & name */}
                   <div className="flex items-center gap-3">
                     <span
-                      className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
-                      style={{ backgroundColor: tier.color }}
-                    />
+                      className="onboarding-tier-icon"
+                      style={{
+                        backgroundColor: `${tier.color}18`,
+                        color: tier.color,
+                      }}
+                    >
+                      <Crown size={20} aria-hidden="true" />
+                    </span>
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-bold text-[var(--foreground)]">
@@ -241,7 +271,10 @@ export function VIPTierList({
 
                 {/* Inline Errors if any */}
                 {(hasOrderError || hasPointsError || hasNameError) && (
-                  <div className="mt-2.5 pt-2 border-t border-[var(--border)] text-xs text-[var(--destructive)] flex items-center gap-1.5">
+                  <div
+                    role="alert"
+                    className="mt-2.5 pt-2 border-t border-[var(--border)] text-xs text-[var(--destructive)] flex items-center gap-1.5"
+                  >
                     <AlertTriangle size={13} />
                     <span>
                       {hasNameError || hasPointsError || hasOrderError}
@@ -269,7 +302,9 @@ export function VIPTierList({
               How VIP tiers work
             </h4>
             <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
-              Customers automatically move to a higher tier when they reach its points requirement. You can set up custom tier rewards (such as point multipliers or free gifts) anytime in settings.
+              Customers automatically move to a higher tier when they reach its
+              points requirement. You can set up custom tier rewards (such as
+              point multipliers or free gifts) anytime in settings.
             </p>
           </div>
         </div>
@@ -291,6 +326,7 @@ export function VIPTierList({
                 variant="default"
                 size="sm"
                 onClick={handleSaveAll}
+                disabled={overrideState === "saving"}
                 className="text-xs h-9 px-4 font-semibold"
               >
                 Save VIP tiers
@@ -326,6 +362,7 @@ export function VIPTierList({
             </label>
             <input
               type="text"
+              aria-label="Tier name"
               value={newTierName}
               onChange={(e) => {
                 setNewTierName(e.target.value);
@@ -342,6 +379,7 @@ export function VIPTierList({
             </label>
             <input
               type="number"
+              aria-label="Minimum lifetime points required"
               min="1"
               value={newTierPoints}
               onChange={(e) => {
@@ -362,9 +400,13 @@ export function VIPTierList({
                 <button
                   key={hex}
                   type="button"
+                  aria-label={`Use tier color ${hex}`}
+                  aria-pressed={newTierColor === hex}
                   onClick={() => setNewTierColor(hex)}
                   className={`w-7 h-7 rounded-full transition-transform ${
-                    newTierColor === hex ? "scale-110 ring-2 ring-[var(--ring)] ring-offset-2" : ""
+                    newTierColor === hex
+                      ? "scale-110 ring-2 ring-[var(--ring)] ring-offset-2"
+                      : ""
                   }`}
                   style={{ backgroundColor: hex }}
                 />
@@ -373,7 +415,10 @@ export function VIPTierList({
           </div>
 
           {modalError && (
-            <p className="text-xs text-[var(--destructive)] font-medium flex items-center gap-1">
+            <p
+              role="alert"
+              className="text-xs text-[var(--destructive)] font-medium flex items-center gap-1"
+            >
               <AlertTriangle size={13} />
               <span>{modalError}</span>
             </p>
@@ -418,6 +463,7 @@ export function VIPTierList({
               </label>
               <input
                 type="text"
+                aria-label="Tier name"
                 value={editingTier.name}
                 onChange={(e) =>
                   setEditingTier({ ...editingTier, name: e.target.value })
@@ -432,6 +478,7 @@ export function VIPTierList({
               </label>
               <input
                 type="number"
+                aria-label="Minimum lifetime points required"
                 min="0"
                 value={editingTier.minimumPoints}
                 onChange={(e) =>
@@ -453,9 +500,14 @@ export function VIPTierList({
                   <button
                     key={hex}
                     type="button"
-                    onClick={() => setEditingTier({ ...editingTier, color: hex })}
+                    aria-label={`Use tier color ${hex}`}
+                    onClick={() =>
+                      setEditingTier({ ...editingTier, color: hex })
+                    }
                     className={`w-7 h-7 rounded-full transition-transform ${
-                      editingTier.color === hex ? "scale-110 ring-2 ring-[var(--ring)] ring-offset-2" : ""
+                      editingTier.color === hex
+                        ? "scale-110 ring-2 ring-[var(--ring)] ring-offset-2"
+                        : ""
                     }`}
                     style={{ backgroundColor: hex }}
                   />

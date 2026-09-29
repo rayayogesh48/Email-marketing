@@ -19,7 +19,8 @@ export default async function SettingsPage({
     rawSection === "store" ||
     rawSection === "branding" ||
     rawSection === "team" ||
-    rawSection === "notifications"
+    rawSection === "notifications" ||
+    rawSection === "billing"
       ? rawSection
       : "account";
 

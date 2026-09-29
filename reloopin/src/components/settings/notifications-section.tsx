@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   NotificationGroup,
   SummaryPreferences,
 } from "@/lib/settings/settings-types";
+import { Button } from "@/components/ui/button";
 import {
   Bell,
   Mail,
+  Smartphone,
   Lock,
   ExternalLink,
   ShieldAlert,
   Info,
+  Check,
   Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +26,7 @@ export function NotificationsSection({
   isReadOnly,
   previewState,
   onUpdateToggle,
+  onToggleAll,
   onUpdateSummaryPreferences,
   onDirtyChange,
 }: {
@@ -36,6 +40,7 @@ export function NotificationsSection({
     channel: "email" | "inApp",
     value: boolean,
   ) => void;
+  onToggleAll: (channel: "email" | "inApp", enabled: boolean) => void;
   onUpdateSummaryPreferences: (updates: Partial<SummaryPreferences>) => void;
   onDirtyChange: (isDirty: boolean, handleSave: () => void, handleCancel: () => void) => void;
 }) {
@@ -43,18 +48,23 @@ export function NotificationsSection({
   const [localGroups, setLocalGroups] = useState<NotificationGroup[]>(groups);
   const [localSummary, setLocalSummary] = useState<SummaryPreferences>(summaryPreferences);
 
+  useEffect(() => {
+    setLocalGroups(groups);
+    setLocalSummary(summaryPreferences);
+  }, [groups, summaryPreferences]);
+
   // Determine if modified
   const isDirty =
     previewState === "notifications_modified" ||
     JSON.stringify(localGroups) !== JSON.stringify(groups) ||
     JSON.stringify(localSummary) !== JSON.stringify(summaryPreferences);
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setLocalGroups(groups);
     setLocalSummary(summaryPreferences);
-  }, [groups, summaryPreferences]);
+  };
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (isReadOnly) return;
     if (previewState === "notifications_save_failed") {
       toast.error("Preferences could not be saved: Your previous notification settings are still active.");
@@ -70,11 +80,11 @@ export function NotificationsSection({
     });
     onUpdateSummaryPreferences(localSummary);
     toast.success("Notification preferences saved");
-  }, [isReadOnly, previewState, localGroups, localSummary, onUpdateToggle, onUpdateSummaryPreferences]);
+  };
 
   useEffect(() => {
     onDirtyChange(isDirty, handleSave, handleCancel);
-  }, [isDirty, handleSave, handleCancel, onDirtyChange]);
+  }, [isDirty, localGroups, localSummary]);
 
   const handleToggleItem = (
     groupId: string,

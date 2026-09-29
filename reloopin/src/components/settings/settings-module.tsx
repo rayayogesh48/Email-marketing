@@ -26,6 +26,7 @@ import { StoreProfileForm } from "./store-profile-form";
 import { BrandingForm } from "./branding-form";
 import { TeamSection } from "./team-section";
 import { NotificationsSection } from "./notifications-section";
+import { BillingModule } from "@/components/billing/billing-module";
 import {
   availableStores,
   initialStoreProfiles,
@@ -170,11 +171,13 @@ export function SettingsModule({
     <div className="w-full min-h-screen pb-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Shared Header */}
-        <SettingsHeader
-          activeStoreId={store.activeStoreId}
-          isStoreSpecific={isStoreSpecific}
-          onSwitchStoreRequest={handleStoreSwitchRequest}
-        />
+        {section !== "billing" && (
+          <SettingsHeader
+            activeStoreId={store.activeStoreId}
+            isStoreSpecific={isStoreSpecific}
+            onSwitchStoreRequest={handleStoreSwitchRequest}
+          />
+        )}
 
         {/* Global Notices */}
         {isOffline && <OfflineNotice />}
@@ -260,11 +263,16 @@ export function SettingsModule({
                 onUpdateToggle={(grpId, itemId, channel, val) =>
                   settingsStore.updateNotificationToggle(grpId, itemId, channel, val)
                 }
+                onToggleAll={(channel, enabled) =>
+                  settingsStore.toggleAllNotifications(channel, enabled)
+                }
                 onUpdateSummaryPreferences={(updates) =>
                   settingsStore.updateSummaryPreferences(updates)
                 }
                 onDirtyChange={handleDirtyChange}
               />
+            ) : section === "billing" ? (
+              <BillingModule />
             ) : null}
           </main>
         </div>
@@ -299,7 +307,7 @@ export function SettingsModule({
       />
 
       {/* Floating Preview States Drawer Button */}
-      <PreviewStatesDrawer currentSection={section} />
+      {section !== "billing" && <PreviewStatesDrawer currentSection={section} />}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { SettingsSection } from "@/lib/settings/settings-types";
-import { User, Store, Palette, Users, Bell } from "lucide-react";
+import { User, Store, Palette, Users, Bell, CreditCard } from "lucide-react";
 
 interface NavItem {
   id: SettingsSection;
@@ -17,36 +17,42 @@ export const settingsNavItems: NavItem[] = [
   {
     id: "account",
     label: "My account",
-    href: "/settings?section=account",
+    href: "/settings/account",
     icon: User,
   },
   {
     id: "store",
     label: "Store profile",
-    href: "/settings?section=store",
+    href: "/settings/store",
     icon: Store,
     isStoreSpecific: true,
   },
   {
     id: "branding",
     label: "Branding",
-    href: "/settings?section=branding",
+    href: "/settings/branding",
     icon: Palette,
     isStoreSpecific: true,
   },
   {
     id: "team",
     label: "Team",
-    href: "/settings?section=team",
+    href: "/settings/team",
     icon: Users,
     isStoreSpecific: true,
   },
   {
     id: "notifications",
     label: "Notifications",
-    href: "/settings?section=notifications",
+    href: "/settings/notifications",
     icon: Bell,
     isStoreSpecific: true,
+  },
+  {
+    id: "billing",
+    label: "Billing & plans",
+    href: "/settings/billing",
+    icon: CreditCard,
   },
 ];
 
@@ -58,6 +64,7 @@ export function SettingsNavigation({
   onNavigate?: (section: SettingsSection) => boolean; // return false to cancel navigation (e.g. dirty form)
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleItemClick = (e: React.MouseEvent, item: NavItem) => {
     if (onNavigate) {
@@ -84,7 +91,7 @@ export function SettingsNavigation({
             if (onNavigate && !onNavigate(targetSection)) {
               return;
             }
-            router.push(`/settings?section=${targetSection}`);
+            router.push(`/settings/${targetSection}`);
           }}
           className="w-full px-3 py-2 text-sm bg-[var(--card)] border border-[var(--border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:border-[var(--ring)]"
         >

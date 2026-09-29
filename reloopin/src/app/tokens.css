@@ -1,5 +1,6 @@
 /* User-supplied Reloopin semantic color tokens. Source: tokens.json. */
-:root {
+:root,
+.light {
   --background: #f9f9f9;
   --foreground: #0a0a0a;
   --card: #ffffff;

@@ -3,7 +3,8 @@ export type SettingsSection =
   | "store"
   | "branding"
   | "team"
-  | "notifications";
+  | "notifications"
+  | "billing";
 
 export type TeamRole = "owner" | "admin" | "staff" | "viewer";
 
