@@ -1,284 +1,261 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  BillingTab,
-  BillingPlanId,
-  PaymentMethod,
-} from "@/lib/billing/billing-types";
-import { useBillingStore, billingStore } from "@/lib/billing/billing-store";
-import { BillingPageHeader } from "./billing-page-header";
-import { CurrentPlanCard } from "./current-plan-card";
-import { UsageSection } from "./usage-section";
-import { PlansTab } from "./plans-tab";
-import { PaymentMethodsTab } from "./payment-methods-tab";
-import { InvoicesTab } from "./invoices-tab";
-import { FailedPaymentBanner } from "./failed-payment-banner";
-import { DangerZone } from "./danger-zone";
-import { UpgradeDialog } from "./upgrade-dialog";
-import { DowngradeDialog } from "./downgrade-dialog";
-import { CancelSubscriptionDialog } from "./cancel-subscription-dialog";
-import { ReactivateSubscriptionDialog } from "./reactivate-subscription-dialog";
-import { PaymentMethodDialog } from "./payment-method-dialog";
-import { InvoiceDetailDrawer } from "./invoice-detail-drawer";
-import { PreviewStatesDrawer } from "./preview-states-drawer";
-import { BillingSkeleton, BillingErrorState } from "./billing-states";
-import { toast } from "sonner";
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { BillingTab, UsageOrder, Invoice, BillingPreviewState } from '@/lib/billing/billing-types';
+import { useBillingStore, billingStore } from '@/lib/billing/billing-store';
+import { BillingPageHeader } from './billing-page-header';
+import { PaymentFailureAlert } from './payment-failure-alert';
+import { SyncStatusBanner } from './sync-status-banner';
+import { BillingPeriodSelect } from './billing-period-select';
+import { CurrentUsageCard } from './current-usage-card';
+import { BillingExplanationCard } from './billing-explanation-card';
+import { BillingSummaryCard } from './billing-summary-card';
+import { UsageTrendChart } from './usage-trend-chart';
+import { RecentUsageTable } from './recent-usage-table';
+import { BillingActivityTimeline } from './billing-activity-timeline';
+import { OrderUsageTab } from './order-usage-tab';
+import { InvoicesTab } from './invoices-tab';
+import { PaymentDetailsTab } from './payment-details-tab';
+import { CountedOrderRulesSheet } from './counted-order-rules-sheet';
+import { OrderDetailSheet } from './order-detail-sheet';
+import { InvoiceDetailDrawer } from './invoice-detail-drawer';
+import { PaymentMethodDialog } from './payment-method-dialog';
+import { PreviewStatesDrawer } from './preview-states-drawer';
+import { Eye } from 'lucide-react';
+import { toast } from 'sonner';
 
-export function BillingModule({
-  initialTab = "overview",
-}: {
+interface BillingModuleProps {
   initialTab?: BillingTab;
-}) {
+}
+
+export function BillingModule({ initialTab = 'overview' }: BillingModuleProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const store = useBillingStore();
 
-  const tabQuery = searchParams.get("tab") as BillingTab | null;
-  const stateQuery = searchParams.get("state");
+  const tabQuery = searchParams.get('tab') as BillingTab | null;
+  const stateQuery = searchParams.get('state');
 
-  // Keep tab in sync with URL
+  // Modal / Drawer local states
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<UsageOrder | null>(null);
+  const [orderDetailOpen, setOrderDetailOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceDetailOpen, setInvoiceDetailOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+
+  // Sync tab from URL
   useEffect(() => {
-    if (
-      tabQuery &&
-      ["overview", "plans", "payment-methods", "invoices"].includes(tabQuery)
-    ) {
+    if (tabQuery && ['overview', 'usage', 'invoices', 'payment'].includes(tabQuery)) {
       if (tabQuery !== store.activeTab) {
         billingStore.setActiveTab(tabQuery);
       }
     }
   }, [tabQuery, store.activeTab]);
 
-  // Keep state in sync if provided via query param
+  // Sync preset state from URL
   useEffect(() => {
     if (stateQuery && stateQuery !== store.previewState) {
-      billingStore.setPreviewState(stateQuery as any);
+      billingStore.setPreviewState(stateQuery as BillingPreviewState);
     }
   }, [stateQuery, store.previewState]);
 
   const handleTabChange = (tab: BillingTab) => {
     billingStore.setActiveTab(tab);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
+    params.set('tab', tab);
     router.replace(`/settings/billing?${params.toString()}`, { scroll: false });
   };
 
-  const currentPlan =
-    store.plans.find((p) => p.id === store.subscription.planId) ||
-    store.plans[1];
+  const handleOpenOrder = (order: UsageOrder) => {
+    setSelectedOrder(order);
+    setOrderDetailOpen(true);
+  };
 
-  const targetUpgradePlan =
-    store.plans.find((p) => p.id === store.upgradeTargetPlanId) ||
-    store.plans[2];
+  const handleOpenInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setInvoiceDetailOpen(true);
+  };
 
-  const targetDowngradePlan =
-    store.plans.find((p) => p.id === store.downgradeTargetPlanId) ||
-    store.plans[0];
+  const handleRetryPayment = async () => {
+    const success = await billingStore.retryPayment();
+    if (success) {
+      toast.success('Payment recovered successfully. Grace period cleared.');
+    } else {
+      toast.error('Payment retry declined. Please update your payment method.');
+    }
+  };
 
-  const [selectedMethodToUpdate, setSelectedMethodToUpdate] =
-    useState<PaymentMethod | null>(null);
-
-  if (store.dataState === "loading") {
-    return <BillingSkeleton />;
-  }
-
-  if (store.dataState === "error") {
-    return (
-      <BillingErrorState
-        onRetry={() => {
-          billingStore.setDataState("default");
-          toast.success("Billing details reloaded.");
-        }}
-      />
-    );
-  }
+  const selectedPeriod =
+    store.periods.find((p) => p.id === store.selectedPeriodId) ||
+    store.periods[0];
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-4 px-4 sm:px-6">
-      {/* Page Header */}
-      <BillingPageHeader
-        activeTab={store.activeTab}
-        onTabChange={handleTabChange}
-        onViewPlans={() => handleTabChange("plans")}
-        permission={store.permission}
-      />
-
-      {/* Failed Payment & Grace Period Banner */}
-      <FailedPaymentBanner
-        subscription={store.subscription}
-        permission={store.permission}
-        gracePeriodEndsAt={store.gracePeriodEndsAt}
-        isRetrying={store.isRetryingPayment}
-        onRetryPayment={async () => {
-          const success = await billingStore.retryPayment();
-          if (success) {
-            toast.success("Payment completed. Your Growth plan is active.");
-          }
-        }}
-        onUpdatePaymentMethod={() => {
-          billingStore.openPaymentMethodModal("update");
-        }}
-      />
-
-      {/* TAB CONTENT */}
-      {store.activeTab === "overview" && (
-        <div className="space-y-8">
-          <CurrentPlanCard
-            plan={currentPlan}
-            subscription={store.subscription}
-            permission={store.permission}
-            onChangePlan={() => handleTabChange("plans")}
-            onReactivate={() => billingStore.openReactivateModal()}
-            onCancelScheduledDowngrade={() => {
-              billingStore.cancelScheduledDowngrade();
-              toast.success("Scheduled downgrade cancelled. Growth plan maintained.");
-            }}
-            onManageSubscription={() => {
-              const el = document.getElementById("danger-zone");
-              if (el) el.scrollIntoView({ behavior: "smooth" });
-              else handleTabChange("plans");
-            }}
-          />
-
-          <UsageSection
-            metrics={store.usageMetrics}
-            permission={store.permission}
-            onComparePlans={() => handleTabChange("plans")}
-            onUpgradePlan={() => {
-              handleTabChange("plans");
-            }}
-          />
-
-          <div id="danger-zone">
-            <DangerZone
-              plan={currentPlan}
-              subscription={store.subscription}
-              permission={store.permission}
-              onOpenCancelModal={() => billingStore.openCancelModal()}
-              onOpenReactivateModal={() => billingStore.openReactivateModal()}
-            />
+    <div className="w-full max-w-5xl mx-auto py-4 px-4 sm:px-6 space-y-6">
+      {/* Read-Only Staff Notice */}
+      {store.permission === 'staff' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-800">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>
+              <strong>Staff view (read-only):</strong> You are viewing billing with Staff permissions. Managing payment methods requires Owner or Billing Admin privileges.
+            </span>
           </div>
+          <button
+            onClick={() => billingStore.setPermission('owner')}
+            className="text-[11px] underline font-medium hover:text-amber-950 shrink-0 ml-2"
+          >
+            Switch to Owner
+          </button>
         </div>
       )}
 
-      {store.activeTab === "plans" && (
-        <PlansTab
-          plans={store.plans}
-          subscription={store.subscription}
-          permission={store.permission}
-          onSelectUpgrade={(planId) => billingStore.openUpgradeModal(planId)}
-          onSelectDowngrade={(planId) => billingStore.openDowngradeModal(planId)}
+      {/* Payment Failure & Grace Period Alert */}
+      <PaymentFailureAlert
+        isVisible={store.paymentFailureActive || store.paymentDetails.status === 'failed'}
+        isRetrying={store.isRetryingPayment}
+        gracePeriodEndsAt={store.paymentDetails.gracePeriodEndsAt || '7 October 2026'}
+        permission={store.permission}
+        amount={selectedPeriod.estimatedCharge}
+        onRetryPayment={handleRetryPayment}
+        onUpdatePaymentMethod={() => setPaymentDialogOpen(true)}
+      />
+
+      {/* Sync Status Banner */}
+      <SyncStatusBanner
+        status={store.syncStatus}
+        isSyncing={store.isSyncing}
+        onRetrySync={() => billingStore.retrySync()}
+      />
+
+      {/* Page Header with 4 Tabs */}
+      <BillingPageHeader
+        activeTab={store.activeTab}
+        onTabChange={handleTabChange}
+        onViewOrderUsage={() => handleTabChange('usage')}
+        permission={store.permission}
+        countedOrdersCount={store.countedOrdersCount}
+      />
+
+      {/* TAB 1: OVERVIEW */}
+      {store.activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Period selector & active store context */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-xs text-[#71717a]">
+                Displaying usage for store: <strong className="text-[#0a0a0a] font-semibold">Northstar Goods</strong> (Shopify Connected)
+              </span>
+            </div>
+            <BillingPeriodSelect
+              periods={store.periods}
+              selectedPeriodId={selectedPeriod.id}
+              onSelectPeriod={(periodId) => billingStore.setSelectedPeriod(periodId)}
+            />
+          </div>
+
+          {/* Primary Usage Hero Card */}
+          <CurrentUsageCard
+            period={selectedPeriod}
+            countedOrders={store.countedOrdersCount}
+          />
+
+          {/* 30-Day Cumulative Usage Chart */}
+          <UsageTrendChart
+            countedOrdersCount={store.countedOrdersCount}
+          />
+
+          {/* 2-Column Explanation & Summary Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BillingExplanationCard onOpenRules={() => setRulesOpen(true)} />
+            <BillingSummaryCard
+              period={selectedPeriod}
+              countedOrders={store.countedOrdersCount}
+              excludedOrders={store.excludedOrdersCount}
+              paymentDetails={store.paymentDetails}
+            />
+          </div>
+
+          {/* Recent Usage Table (Latest 5 orders) */}
+          <RecentUsageTable
+            orders={store.orders}
+            onSelectOrder={handleOpenOrder}
+            onViewAllOrders={() => handleTabChange('usage')}
+          />
+
+          {/* Activity Timeline */}
+          <BillingActivityTimeline items={store.timeline} />
+        </div>
+      )}
+
+      {/* TAB 2: ORDER USAGE */}
+      {store.activeTab === 'usage' && (
+        <OrderUsageTab
+          orders={store.orders}
+          countedOrdersCount={store.countedOrdersCount}
+          excludedOrdersCount={store.excludedOrdersCount}
+          underReviewOrdersCount={store.underReviewOrdersCount}
+          period={selectedPeriod}
+          searchQuery={store.searchQuery}
+          onSearchChange={(q) => billingStore.setSearchQuery(q)}
+          billingFilter={store.billingStatusFilter}
+          onBillingFilterChange={(f) => billingStore.setBillingStatusFilter(f)}
+          storeStatusFilter={store.storeStatusFilter}
+          onStoreStatusFilterChange={(s) => billingStore.setStoreStatusFilter(s)}
+          currentPage={store.currentPage}
+          onPageChange={(p) => billingStore.setCurrentPage(p)}
+          pageSize={store.pageSize}
+          onPageSizeChange={(size) => billingStore.setPageSize(size)}
+          onSelectOrder={handleOpenOrder}
         />
       )}
 
-      {store.activeTab === "payment-methods" && (
-        <PaymentMethodsTab
-          paymentMethods={store.paymentMethods}
-          subscription={store.subscription}
-          permission={store.permission}
-          onOpenAddCard={() => {
-            setSelectedMethodToUpdate(null);
-            billingStore.openPaymentMethodModal("add");
-          }}
-          onOpenUpdateCard={(pm) => {
-            setSelectedMethodToUpdate(pm);
-            billingStore.openPaymentMethodModal("update");
-          }}
-          onRemoveCard={(id) => {
-            billingStore.removePaymentMethod(id);
-          }}
-          blockedRemovalOpen={store.blockedRemovalModalOpen}
-          onCloseBlockedRemoval={() => billingStore.closeBlockedRemovalModal()}
-        />
-      )}
-
-      {store.activeTab === "invoices" && (
+      {/* TAB 3: INVOICES */}
+      {store.activeTab === 'invoices' && (
         <InvoicesTab
           invoices={store.invoices}
           permission={store.permission}
-          onViewInvoice={(inv) => billingStore.openInvoiceDrawer(inv)}
+          onViewInvoice={handleOpenInvoice}
         />
       )}
 
-      {/* MODALS & DRAWERS */}
-      {store.upgradeModalOpen && (
-        <UpgradeDialog
-          open={store.upgradeModalOpen}
-          onClose={() => billingStore.closeUpgradeModal()}
-          currentPlan={currentPlan}
-          targetPlan={targetUpgradePlan}
-          subscription={store.subscription}
-          paymentMethods={store.paymentMethods}
-          onConfirmUpgrade={(planId) => billingStore.performUpgrade(planId)}
-          onOpenAddPaymentMethod={() => {
-            billingStore.closeUpgradeModal();
-            billingStore.openPaymentMethodModal("add");
-          }}
-          onViewOverview={() => handleTabChange("overview")}
+      {/* TAB 4: PAYMENT DETAILS */}
+      {store.activeTab === 'payment' && (
+        <PaymentDetailsTab
+          paymentDetails={store.paymentDetails}
+          permission={store.permission}
+          onOpenPaymentModal={() => setPaymentDialogOpen(true)}
+          onSwitchBillingMode={(mode) => billingStore.setBillingMode(mode)}
         />
       )}
 
-      {store.downgradeModalOpen && (
-        <DowngradeDialog
-          open={store.downgradeModalOpen}
-          onClose={() => billingStore.closeDowngradeModal()}
-          currentPlan={currentPlan}
-          targetPlan={targetDowngradePlan}
-          subscription={store.subscription}
-          metrics={store.usageMetrics}
-          onScheduleDowngrade={(planId) => billingStore.scheduleDowngrade(planId)}
-        />
-      )}
+      {/* OVERLAYS & SHEETS */}
+      <CountedOrderRulesSheet
+        open={rulesOpen}
+        onOpenChange={setRulesOpen}
+      />
 
-      {store.cancelModalOpen && (
-        <CancelSubscriptionDialog
-          open={store.cancelModalOpen}
-          onClose={() => billingStore.closeCancelModal()}
-          plan={currentPlan}
-          subscription={store.subscription}
-          metrics={store.usageMetrics}
-          onConfirmCancel={(reason) => billingStore.confirmCancellation(reason)}
-        />
-      )}
+      <OrderDetailSheet
+        order={selectedOrder}
+        open={orderDetailOpen}
+        onOpenChange={setOrderDetailOpen}
+      />
 
-      {store.reactivateModalOpen && (
-        <ReactivateSubscriptionDialog
-          open={store.reactivateModalOpen}
-          onClose={() => billingStore.closeReactivateModal()}
-          plan={currentPlan}
-          subscription={store.subscription}
-          onConfirmReactivate={() => billingStore.confirmReactivation()}
-        />
-      )}
+      <InvoiceDetailDrawer
+        open={invoiceDetailOpen}
+        onClose={() => setInvoiceDetailOpen(false)}
+        invoice={selectedInvoice}
+      />
 
-      {store.paymentMethodModalOpen && (
-        <PaymentMethodDialog
-          open={store.paymentMethodModalOpen}
-          onClose={() => billingStore.closePaymentMethodModal()}
-          mode={store.paymentMethodModalMode}
-          existingMethod={selectedMethodToUpdate}
-          onSave={(card) => billingStore.savePaymentMethod(card)}
-        />
-      )}
-
-      {store.invoiceDrawerOpen && (
-        <InvoiceDetailDrawer
-          open={store.invoiceDrawerOpen}
-          onClose={() => billingStore.closeInvoiceDrawer()}
-          invoice={store.selectedInvoiceForDetail}
-        />
-      )}
+      <PaymentMethodDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        isPlatformManaged={store.paymentDetails.billingMode === 'platform'}
+      />
 
       {/* Floating Developer Preview States Controller */}
-      <PreviewStatesDrawer
-        store={store}
-        onOpenUpgrade={(pid) => billingStore.openUpgradeModal(pid)}
-        onOpenDowngrade={(pid) => billingStore.openDowngradeModal(pid)}
-        onOpenCancel={() => billingStore.openCancelModal()}
-        onOpenReactivate={() => billingStore.openReactivateModal()}
-        onOpenAddPayment={() => billingStore.openPaymentMethodModal("add")}
-      />
+      <PreviewStatesDrawer store={store} />
     </div>
   );
 }

@@ -678,7 +678,7 @@ export default function Dashboard({
         <nav>
           {[
             { name: "Integrations", Icon: Plug, href: "/integrations" },
-            { name: "Billing & plans", Icon: CreditCard, href: "/settings/billing" },
+            { name: "Billing", Icon: CreditCard, href: "/settings/billing" },
             { name: "Team", Icon: Users, href: "/settings?section=team" },
             { name: "Account settings", Icon: SettingsIcon, href: "/settings?section=account" },
           ].map(({ name, Icon, href }) => {
@@ -845,7 +845,7 @@ export default function Dashboard({
                     : workspace === "dashboard"
                       ? "Dashboard"
                       : workspace === "settings"
-                        ? (settingsSection === "billing" ? "Billing & plans" : "Settings")
+                        ? (settingsSection === "billing" ? "Billing" : "Settings")
                         : "Emails"}
               </strong>
             )}

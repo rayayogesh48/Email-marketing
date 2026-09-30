@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import Dashboard from "@/components/dashboard";
 
 export const metadata: Metadata = {
-  title: "Billing & Plans · Reloopin",
-  description: "Manage your subscription, usage, payment details, and invoices.",
+  title: "Billing · Reloopin",
+  description: "Track monthly order usage, estimated charges, payment details, and invoices.",
 };
 
 export default function BillingSettingsPage() {
