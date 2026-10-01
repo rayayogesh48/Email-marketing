@@ -42,6 +42,7 @@ import {
   Clock,
   Sun,
   Moon,
+  TrendingUp,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import {
@@ -64,6 +65,7 @@ import { Branding, Settings } from "./settings";
 import { CampaignDetails } from "./campaign-details";
 import { ConversationPage } from "./conversation/conversation-page";
 import { AnalyticsModule } from "./analytics/analytics-module";
+import { AnalyticsV2Module } from "./analytics-v2/analytics-v2-module";
 import { MerchantDashboard } from "./dashboard/merchant-dashboard";
 import { IntegrationsModule } from "./integrations/integrations-module";
 import { useIntegrationsStore } from "@/lib/integrations/integrations-store";
@@ -155,6 +157,7 @@ export default function Dashboard({
     | "emails"
     | "conversation"
     | "analytics"
+    | "analytics-v2"
     | "integrations"
     | "settings"
     | "customers";
@@ -617,6 +620,7 @@ export default function Dashboard({
             { name: "Rewards", Icon: Gift, href: null },
             { name: "Customers", Icon: Users, href: "/customers" },
             { name: "Analytics", Icon: BarChart3, href: "/analytics" },
+            { name: "Analytics V2", Icon: TrendingUp, href: "/analytics-v2" },
             { name: "Email marketing", Icon: Mail, href: "/" },
             { name: "Conversation", Icon: MessageCircle, href: "/conversation" },
             { name: "Settings", Icon: SettingsIcon, href: "/settings" },
@@ -624,6 +628,7 @@ export default function Dashboard({
             const isEmailNav = name === "Email marketing" || name === "Emails";
             const isDashboardNav = name === "Dashboard";
             const isAnalyticsNav = name === "Analytics";
+            const isAnalyticsV2Nav = name === "Analytics V2";
             const isConversationNav = name === "Conversation";
             const isSettingsNav = name === "Settings";
             const isCustomersNav = name === "Customers";
@@ -632,6 +637,7 @@ export default function Dashboard({
               (isDashboardNav && workspace === "dashboard") ||
               (isEmailNav && workspace === "emails") ||
               (isAnalyticsNav && workspace === "analytics") ||
+              (isAnalyticsV2Nav && workspace === "analytics-v2") ||
               (isConversationNav && workspace === "conversation") ||
               (isCustomersNav && workspace === "customers") ||
               (isSettingsNav && workspace === "settings" && settingsSection !== "billing");
@@ -801,6 +807,8 @@ export default function Dashboard({
               <Plug size={17} />
             ) : workspace === "analytics" ? (
               <BarChart3 size={17} />
+            ) : workspace === "analytics-v2" ? (
+              <TrendingUp size={17} />
             ) : workspace === "customers" ? (
               <Users size={17} />
             ) : workspace === "conversation" ? (
@@ -840,6 +848,8 @@ export default function Dashboard({
                   ? "Integrations"
                   : workspace === "analytics"
                   ? "Analytics"
+                  : workspace === "analytics-v2"
+                  ? "Analytics V2"
                   : workspace === "conversation"
                     ? "Conversation"
                     : workspace === "dashboard"
@@ -884,6 +894,8 @@ export default function Dashboard({
           className={`main-content ${
             workspace === "conversation" ? "conversation-main" : ""
           } ${workspace === "analytics" ? "analytics-main" : ""} ${
+            workspace === "analytics-v2" ? "analytics-v2-main p-0 overflow-visible" : ""
+          } ${
             workspace === "dashboard" ? "dashboard-main" : ""
           } ${workspace === "integrations" ? "integrations-main" : ""} ${
             workspace === "customers" ? "customers-main p-0 overflow-visible" : ""
@@ -893,6 +905,7 @@ export default function Dashboard({
         >
           {workspace === "conversation" && <ConversationPage />}
           {workspace === "analytics" && <AnalyticsModule store={store} />}
+          {workspace === "analytics-v2" && <AnalyticsV2Module store={store} />}
           {workspace === "dashboard" && <MerchantDashboard initialStore={store} />}
           {workspace === "customers" && (
             <CustomersModule customerId={customerId} isImport={isImport} />
