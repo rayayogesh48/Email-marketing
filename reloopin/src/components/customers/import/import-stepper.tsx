@@ -1,79 +1,72 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Check } from "lucide-react";
-import { ImportStep } from "@/lib/customers/customer-types";
+import React from 'react';
+import { Check } from 'lucide-react';
 
-export function ImportStepper({
-  currentStep,
-  onStepClick,
-}: {
-  currentStep: ImportStep;
-  onStepClick?: (step: ImportStep) => void;
-}) {
-  const steps: { step: ImportStep; title: string }[] = [
-    { step: 1, title: "Upload file" },
-    { step: 2, title: "Map columns" },
-    { step: 3, title: "Review data" },
-    { step: 4, title: "Import customers" },
-  ];
+interface ImportStepperProps {
+  currentStep: number; // 1, 2, 3, or 4
+  allCompleted?: boolean;
+}
 
+const STEPS = [
+  { step: 1, label: 'Upload file' },
+  { step: 2, label: 'Map columns' },
+  { step: 3, label: 'Preview' },
+  { step: 4, label: 'Complete' },
+];
+
+export function ImportStepper({ currentStep, allCompleted = false }: ImportStepperProps) {
   return (
-    <div className="w-full bg-white border border-[#ebebeb] rounded-xl p-3 shadow-sm">
-      <div className="flex items-center justify-between max-w-[800px] mx-auto">
-        {steps.map((item, idx) => {
-          const isCompleted = item.step < currentStep;
-          const isActive = item.step === currentStep;
-          const isClickable = isCompleted && onStepClick;
+    <div className="w-full bg-white border border-[#ebebeb] rounded-xl p-3 shadow-xs">
+      <div className="grid grid-cols-4 gap-2">
+        {STEPS.map((item) => {
+          const isCompleted = allCompleted || item.step < currentStep;
+          const isCurrent = !allCompleted && item.step === currentStep;
+          const isUpcoming = !allCompleted && item.step > currentStep;
 
           return (
-            <React.Fragment key={item.step}>
-              <button
-                type="button"
-                disabled={!isClickable}
-                onClick={() => isClickable && onStepClick(item.step)}
-                className={`flex items-center gap-2.5 transition-colors ${
-                  isClickable ? "cursor-pointer group" : "cursor-default"
+            <div
+              key={item.step}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                isCurrent
+                  ? 'bg-[#f8f7ff] border border-[#e5e1fc]'
+                  : isCompleted
+                  ? 'bg-zinc-50/60 border border-transparent'
+                  : 'border border-transparent'
+              }`}
+            >
+              {/* Step indicator circle */}
+              <div
+                className={`size-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors ${
+                  isCompleted
+                    ? 'bg-[#5f3ed8]/10 text-[#5f3ed8]'
+                    : isCurrent
+                    ? 'bg-[#5f3ed8] text-white shadow-xs'
+                    : 'bg-zinc-100 text-[#a1a1aa]'
                 }`}
               >
-                {/* Step Circle */}
-                <div
-                  className={`size-7 rounded-full flex items-center justify-center text-[12px] font-bold transition-all ${
-                    isCompleted
-                      ? "bg-emerald-500 text-white"
-                      : isActive
-                      ? "bg-[#5f3ed8] text-white shadow-sm ring-4 ring-[#5f3ed8]/15"
-                      : "bg-zinc-100 text-[#71717a] border border-zinc-200"
-                  }`}
-                >
-                  {isCompleted ? <Check className="size-4 stroke-[3]" /> : item.step}
-                </div>
+                {isCompleted ? (
+                  <Check className="size-3.5 stroke-[2.5]" />
+                ) : (
+                  <span>{item.step}</span>
+                )}
+              </div>
 
-                {/* Step Label */}
+              {/* Label */}
+              <div className="min-w-0">
                 <span
-                  className={`text-[13px] font-medium hidden sm:inline ${
-                    isActive
-                      ? "text-[#0a0a0a] font-semibold"
+                  className={`text-xs font-medium truncate block ${
+                    isCurrent
+                      ? 'text-[#0a0a0a] font-semibold'
                       : isCompleted
-                      ? "text-[#5b5a5a] group-hover:text-[#5f3ed8]"
-                      : "text-[#a1a1aa]"
+                      ? 'text-[#0a0a0a]'
+                      : 'text-[#a1a1aa]'
                   }`}
                 >
-                  {item.title}
+                  {item.label}
                 </span>
-              </button>
-
-              {/* Connecting line */}
-              {idx < steps.length - 1 && (
-                <div
-                  className={`flex-1 h-0.5 mx-3 transition-colors ${
-                    item.step < currentStep
-                      ? "bg-emerald-500"
-                      : "bg-zinc-200"
-                  }`}
-                />
-              )}
-            </React.Fragment>
+              </div>
+            </div>
           );
         })}
       </div>
